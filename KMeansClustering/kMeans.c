@@ -5,6 +5,60 @@
 #include "./etime.h"
 #include "./etime.c"
 
+void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondColumn, double *FirstCluster, double *SecondCluster)
+{
+	int index;
+
+	double currentMinimumOne=FirstColumn[0];
+
+	double currentMinimumTwo=SecondColumn[0];
+
+	double currentMaximumOne=FirstColumn[0];
+
+	double currentMaximumTwo=SecondColumn[0];
+
+	//printf("\n Values in the createInitialPartition function: \n");
+
+	for(index=0;index<ArraySize;++index)
+	{
+		//printf("%g %g \n", FirstColumn[index], SecondColumn[index]);
+
+		if(FirstColumn[index] > currentMaximumOne)
+		{
+			currentMaximumOne=FirstColumn[index];
+		}
+
+		if(SecondColumn[index] > currentMaximumTwo)
+		{
+			currentMaximumTwo=SecondColumn[index];
+		}
+
+		if(FirstColumn[index] < currentMinimumOne)
+		{
+			currentMinimumOne=FirstColumn[index];
+		}
+
+		if(SecondColumn[index] < currentMinimumTwo)
+		{
+			currentMinimumTwo=SecondColumn[index];
+		}
+	}
+
+	printf("\nThe smallest coordinate is: (%g, %g)\n", currentMinimumOne, currentMinimumTwo);
+
+	printf("The largest coordinate is: (%g, %g)\n", currentMaximumOne, currentMaximumTwo);
+
+	printf("\n");
+
+	FirstCluster[0]=currentMinimumOne;
+
+	FirstCluster[1]=currentMinimumTwo;
+
+	SecondCluster[0]=currentMaximumOne;
+
+	SecondCluster[1]=currentMaximumTwo;
+}
+
 int main(int argc, char* argv[])
 {
 	if(argc!=2)
@@ -82,6 +136,24 @@ int main(int argc, char* argv[])
 	for(index=0;index<arraySize;++index)
 	{
 		printf("%g %g \n", firstColumn[index], secondColumn[index]);
+	}
+
+	/*allocate memory for the two cluster arrays*/
+	double *firstCluster=(double*)malloc(arraySize*sizeof(double));
+
+	double *secondCluster=(double*)malloc(arraySize*sizeof(double));
+
+	createInitialPartition(arraySize, firstColumn, secondColumn, firstCluster, secondCluster);
+
+	printf("The inital partitions are:\n");
+
+	int position;
+
+	for(position=0;position<1;++position)
+	{
+		printf("The largest coordinate pair is: (%g, %g)\n", firstCluster[position], firstCluster[position]);
+
+		printf("The smallest coordinate pair is: (%g, %g)\n", secondCluster[position], secondCluster[position]);
 	}
 
 	free(firstColumn);
