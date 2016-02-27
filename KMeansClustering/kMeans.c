@@ -156,6 +156,10 @@ int main(int argc, char* argv[])
 		printf("The smallest coordinate pair is: (%g, %g)\n", secondCluster[position], secondCluster[position]);
 	}
 
+	free(firstCluster);
+
+	free(secondCluster);
+
 	free(firstColumn);
 
 	free(secondColumn);
