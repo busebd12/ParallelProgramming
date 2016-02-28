@@ -18,12 +18,45 @@ struct ThreadData
 	int arraySize;
 };
 
+double calculateClusterMean(int ArraySize, double *Cluster)
+{
+	int count=0;
+
+	int index;
+
+	double sum=0.0;
+
+	double mean;
+
+	for(index=0;index<ArraySize;++index)
+	{
+		sum+=Cluster[index];
+
+		count++;
+	}
+
+	mean=(double)(sum/count);
+
+	return mean;
+}
+
 void* kMeans(void *parameters)
 {
 	struct ThreadData *threadData=parameters;	
 
+	double euclideanDistance=0.0;
+
+	double firstClusterMean=calculateClusterMean(threadData->arraySize, threadData->firstCluster);
+
+	printf("The mean of the first cluster is %g \n \n", firstClusterMean);
+
+	double secondClusterMean=calculateClusterMean(threadData->arraySize, threadData->secondCluster);
+
+	printf("The mean of the second cluster is %g \n", secondClusterMean);
+
 	int index;
 
+	/*
 	printf("Values inside the kMeans function:\n");
 
 	for(index=0;index<threadData->arraySize;++index)
@@ -31,6 +64,11 @@ void* kMeans(void *parameters)
 		printf("%g %g \n", threadData->firstColumn[index], threadData->secondColumn[index]);
 	}
 
+	for(index=0;index<threadData->arraySize;++index)
+	{
+
+	}
+	*/
 	return NULL;
 }
 
