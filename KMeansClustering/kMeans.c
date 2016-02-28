@@ -5,6 +5,35 @@
 #include "./etime.h"
 #include "./etime.c"
 
+struct ThreadData
+{
+	double *firstColumn;
+
+	double *secondColumn;
+
+	double *firstCluster;
+
+	double *secondCluster;
+
+	int arraySize;
+};
+
+void* kMeans(void *parameters)
+{
+	struct ThreadData *threadData=parameters;	
+
+	int index;
+
+	printf("Values inside the kMeans function:\n");
+
+	for(index=0;index<threadData->arraySize;++index)
+	{
+		printf("%g %g \n", threadData->firstColumn[index], threadData->secondColumn[index]);
+	}
+
+	return NULL;
+}
+
 void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondColumn, double *FirstCluster, double *SecondCluster)
 {
 	int index;
@@ -77,6 +106,8 @@ int main(int argc, char* argv[])
 		exit(0);
 	}
 
+	struct ThreadData threadData;
+
 	int arraySize=0;
 
 	int numberOfColumns=0;
@@ -145,6 +176,16 @@ int main(int argc, char* argv[])
 
 	createInitialPartition(arraySize, firstColumn, secondColumn, firstCluster, secondCluster);
 
+	threadData.firstColumn=firstColumn;
+
+	threadData.secondColumn=secondColumn;
+
+	threadData.firstCluster=firstCluster;
+
+	threadData.secondCluster=secondCluster;
+
+	threadData.arraySize=arraySize;
+
 	printf("The inital partitions are:\n");
 
 	int position;
@@ -155,6 +196,29 @@ int main(int argc, char* argv[])
 
 		printf("The smallest coordinate pair is: (%g, %g)\n", secondCluster[position], secondCluster[position]);
 	}
+
+	printf("\n");
+
+	printf("\n");
+
+	/*allocate space for thread array*/
+	pthread_t* threadArray=malloc(arraySize*sizeof(pthread_t));
+
+	pthread_t someThread;
+
+	pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
+
+	/*
+	use long just in case code is run on a 64-bit system
+	long thread;
+
+	for(thread=0;thead<arraySize;++thread)
+	{
+		pthread_create(&threadArray[thread], NULL, kMeans, )
+	}
+	*/
+
+	pthread_join(someThread, NULL);
 
 	free(firstCluster);
 
