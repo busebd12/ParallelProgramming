@@ -33,11 +33,13 @@ void printArray(double *Array, int ArrayLength)
 
 int removeElementAndReallocateArray(double *Array, int Index, int ArrayLength)
 {
+	/*
 	printf("Array before deleting the element:\n");
 
 	printArray(Array, ArrayLength);
 
 	printf("\n");
+	*/
 
 	int start;
 
@@ -47,11 +49,13 @@ int removeElementAndReallocateArray(double *Array, int Index, int ArrayLength)
 		Array[start]=Array[start+1];
 	}
 
+	/*
 	printf("Array after moving elements around:\n");
 
 	printArray(Array, --ArrayLength);
 	
 	printf("\n");
+	*/
 
 	--ArrayLength;
 
@@ -154,6 +158,10 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 
 	int localArraySize=0;
 
+	//int localArraySize2=0;
+
+	int arraySizeCopy=ArraySize;
+
 	//printf("\n Values in the createInitialPartition function: \n");
 
 	for(index=0;index<ArraySize;++index)
@@ -213,14 +221,23 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 	
 	localArraySize=removeElementAndReallocateArray(FirstColumn, minOneIndex, ArraySize);
 
+	ArraySize=localArraySize;
+
 	localArraySize=removeElementAndReallocateArray(FirstColumn, maxOneIndex, ArraySize);
 
-	//localArraySize=removeElementAndReallocateArray(SecondColumn, maxOneIndex, ArraySize);
+	ArraySize=arraySizeCopy;
 
-	//localArraySize=removeElementAndReallocateArray(SecondColumn, minOneIndex, ArraySize);
+	localArraySize=removeElementAndReallocateArray(SecondColumn, maxTwoIndex, ArraySize);
 
-	printf("The new array size (from the createInitialPartition function) is: %d \n", localArraySize);
+	ArraySize=localArraySize;
 
+	localArraySize=removeElementAndReallocateArray(SecondColumn, minTwoIndex, ArraySize);
+
+	ArraySize=localArraySize;
+
+	printf("The new array size (from the createInitialPartition function) is: %d \n", ArraySize);
+
+	return ArraySize;
 }
 
 int main(int argc, char* argv[])
@@ -309,7 +326,7 @@ int main(int argc, char* argv[])
 
 	double *secondCluster=(double*)malloc(arraySize*sizeof(double));
 
-	createInitialPartition(arraySize, firstColumn, secondColumn, firstCluster, secondCluster);
+	int newArraySize=createInitialPartition(arraySize, firstColumn, secondColumn, firstCluster, secondCluster);
 
 	threadData.firstColumn=firstColumn;
 
@@ -319,7 +336,7 @@ int main(int argc, char* argv[])
 
 	threadData.secondCluster=secondCluster;
 
-	threadData.arraySize=arraySize;
+	threadData.arraySize=newArraySize;
 
 	/*
 	printf("The inital partitions are:\n");
