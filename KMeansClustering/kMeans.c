@@ -158,8 +158,6 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 
 	int localArraySize=0;
 
-	//int localArraySize2=0;
-
 	int arraySizeCopy=ArraySize;
 
 	//printf("\n Values in the createInitialPartition function: \n");
