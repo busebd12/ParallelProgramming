@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "./etime.h"
 #include "./etime.c"
 
@@ -17,6 +18,75 @@ struct ThreadData
 
 	int arraySize;
 };
+
+void printArray(double *Array, int ArrayLength)
+{
+	int index;
+
+	for(index=0;index<ArrayLength;++index)
+	{
+		printf("%g ", Array[index]);
+	}
+
+	printf("\n");
+}
+
+int removeElementAndReallocateArray(double *Array, int Index, int ArrayLength)
+{
+	printf("Array before deleting the element:\n");
+
+	printArray(Array, ArrayLength);
+
+	printf("\n");
+
+	int start;
+
+	/*Move elements backwards in array so as to fill the hole left by the removed element*/
+	for(start=Index;start<ArrayLength-1;++start)
+	{
+		Array[start]=Array[start+1];
+	}
+
+	printf("Array after moving elements around:\n");
+
+	printArray(Array, --ArrayLength);
+	
+	printf("\n");
+
+	--ArrayLength;
+
+	/*create temp array with size one less than original since we deleted an element*/
+	double *temp=(double*)malloc(ArrayLength*sizeof(double));
+
+	/*copy the values from the old array in the temp array*/
+	for(start=0;start<ArrayLength;++start)
+	{
+		temp[start]=Array[start];
+	}
+
+	//printArray(temp, ArrayLength);
+
+	/*set all elements of the original array to zero, effectively "deleting" them*/
+	memset(&Array[0], 0, sizeof(Array));
+
+	/*reallocate the size of the original array to one less than what we started with since we deleted an element*/
+	Array=realloc(Array, (ArrayLength)*sizeof(Array));
+
+	/*copy over elements from temp array to original array*/
+	for(start=0;start<ArrayLength;++start)
+	{
+		Array[start]=temp[start];
+	}
+
+	printf("Array after removing element:\n");
+
+	printArray(Array, ArrayLength);
+
+	printf("\n");
+
+	/*return the new array length*/
+	return ArrayLength;
+}
 
 double calculateClusterMean(int ArraySize, double *Cluster)
 {
@@ -44,31 +114,21 @@ void* kMeans(void *parameters)
 {
 	struct ThreadData *threadData=parameters;	
 
-	double euclideanDistance=0.0;
-
 	double firstClusterMean=calculateClusterMean(threadData->arraySize, threadData->firstCluster);
 
-	printf("The mean of the first cluster is %g \n \n", firstClusterMean);
+	printf("The intial mean of the first cluster is %g \n \n", firstClusterMean);
 
 	double secondClusterMean=calculateClusterMean(threadData->arraySize, threadData->secondCluster);
 
-	printf("The mean of the second cluster is %g \n", secondClusterMean);
+	printf("The intial mean of the second cluster is %g \n", secondClusterMean);
 
 	int index;
 
-	/*
-	printf("Values inside the kMeans function:\n");
-
 	for(index=0;index<threadData->arraySize;++index)
 	{
-		printf("%g %g \n", threadData->firstColumn[index], threadData->secondColumn[index]);
+		double euclideanDistance=0.0;
 	}
-
-	for(index=0;index<threadData->arraySize;++index)
-	{
-
-	}
-	*/
+	
 	return NULL;
 }
 
@@ -84,6 +144,16 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 
 	double currentMaximumTwo=SecondColumn[0];
 
+	int maxOneIndex=0;
+
+	int maxTwoIndex=0;
+
+	int minOneIndex=0;
+
+	int minTwoIndex=0;
+
+	int localArraySize=0;
+
 	//printf("\n Values in the createInitialPartition function: \n");
 
 	for(index=0;index<ArraySize;++index)
@@ -93,23 +163,39 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 		if(FirstColumn[index] > currentMaximumOne)
 		{
 			currentMaximumOne=FirstColumn[index];
+
+			maxOneIndex=index;
 		}
 
 		if(SecondColumn[index] > currentMaximumTwo)
 		{
 			currentMaximumTwo=SecondColumn[index];
+
+			maxTwoIndex=index;
 		}
 
 		if(FirstColumn[index] < currentMinimumOne)
 		{
 			currentMinimumOne=FirstColumn[index];
+
+			minOneIndex=index;
 		}
 
 		if(SecondColumn[index] < currentMinimumTwo)
 		{
 			currentMinimumTwo=SecondColumn[index];
+
+			minTwoIndex=index;
 		}
 	}
+
+	printf("The spot of the first maximum is: %d\n", maxOneIndex);
+
+	printf("The spot of the second maximum is: %d \n", maxTwoIndex);
+
+	printf("The spot of the first minimum is: %d \n", minOneIndex);
+
+	printf("The spot of the second minimum is: %d \n", minTwoIndex);
 
 	printf("\nThe smallest coordinate is: (%g, %g)\n", currentMinimumOne, currentMinimumTwo);
 
@@ -124,6 +210,17 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 	SecondCluster[0]=currentMaximumOne;
 
 	SecondCluster[1]=currentMaximumTwo;
+	
+	localArraySize=removeElementAndReallocateArray(FirstColumn, minOneIndex, ArraySize);
+
+	localArraySize=removeElementAndReallocateArray(FirstColumn, maxOneIndex, ArraySize);
+
+	//localArraySize=removeElementAndReallocateArray(SecondColumn, maxOneIndex, ArraySize);
+
+	//localArraySize=removeElementAndReallocateArray(SecondColumn, minOneIndex, ArraySize);
+
+	printf("The new array size (from the createInitialPartition function) is: %d \n", localArraySize);
+
 }
 
 int main(int argc, char* argv[])
@@ -224,6 +321,7 @@ int main(int argc, char* argv[])
 
 	threadData.arraySize=arraySize;
 
+	/*
 	printf("The inital partitions are:\n");
 
 	int position;
@@ -238,13 +336,14 @@ int main(int argc, char* argv[])
 	printf("\n");
 
 	printf("\n");
+	*/
 
 	/*allocate space for thread array*/
 	pthread_t* threadArray=malloc(arraySize*sizeof(pthread_t));
 
 	pthread_t someThread;
 
-	pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
+	//pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
 
 	/*
 	use long just in case code is run on a 64-bit system
