@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "./etime.h"
 #include "./etime.c"
 
@@ -29,6 +30,23 @@ void printArray(double *Array, int ArrayLength)
 	}
 
 	printf("\n");
+}
+
+void addElementToArray(double *Array, int ArraySize, double Element)
+{
+	int index;
+
+	for(index=0;index<ArraySize;++index)
+	{
+		if(Array[index]==0.0)
+		{
+			printf("Spot %d has the value 0.0 \n", index);
+		}
+		else
+		{
+			printf("Spot %d has the value %g \n", index, Array[index]);
+		}
+	}
 }
 
 int removeElementAndReallocateArray(double *Array, int Index, int ArrayLength)
@@ -82,11 +100,13 @@ int removeElementAndReallocateArray(double *Array, int Index, int ArrayLength)
 		Array[start]=temp[start];
 	}
 
+	/*
 	printf("Array after removing element:\n");
 
 	printArray(Array, ArrayLength);
 
 	printf("\n");
+	*/
 
 	/*return the new array length*/
 	return ArrayLength;
@@ -126,17 +146,76 @@ void* kMeans(void *parameters)
 
 	printf("The intial mean of the second cluster is %g \n", secondClusterMean);
 
+	printf("\n");
+
 	int index;
 
-	for(index=0;index<threadData->arraySize;++index)
+	double x2=firstClusterMean;
+
+	double y2=0.0;
+
+	double x3=secondClusterMean;
+
+	double y3=0.0; 
+
+	printf("Values in the kmeans function:\n");
+
+	for(index=0;index<threadData->arraySize-(threadData->arraySize-1);++index)
 	{
-		double euclideanDistance=0.0;
+		printf("%g %g \n", threadData->firstColumn[index], threadData->secondColumn[index]);
+
+		printf("\n");
+
+		double firstEuclideanDistance;
+
+		double secondEuclideanDistance;
+
+		double x1=threadData->firstColumn[index];
+
+		double y1=threadData->secondColumn[index];
+
+		printf("Going to calculate the euclidean distance between (%g, %g) and (%g, %g) \n", x1, x2, y1, y2);
+
+		printf("\n");
+
+		/*calculates the euclidean distance between the coordinate and the mean of the first cluster using the standerd distance function*/
+		firstEuclideanDistance=sqrt(pow((x1+x2), 2)+pow((y1+y2), 2));
+
+		printf("Going to calculate the euclidean distance between (%g, %g) and (%g, %g) \n", x1, x3, y1, y3);
+
+		printf("\n");
+
+		/*calculates the euclidean distance between the coordinate and the mean of the second cluster using the standard distance function*/
+		secondEuclideanDistance=sqrt(pow((x1+x3), 2)+pow((y1+y3),2));
+
+		addElementToArray(threadData->firstCluster, threadData->arraySize, x1);
+
+		/*
+		if(firstEuclideanDistance < secondEuclideanDistance)
+		{
+			//remove elements from their respective columns
+			//removeElementAndReallocateArray(threadData->firstColumn, index);
+
+			//removeElementAndReallocateArray(threadData->secondColumn, index);
+
+			//add the coordinate to the first cluster
+
+		}
+		else
+		{
+			//remove elements from their respective columns
+
+			//add the coordinate to the second cluster
+		}
+		*/
 	}
+
+	printf("\n");
 	
 	return NULL;
 }
 
-void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondColumn, double *FirstCluster, double *SecondCluster)
+int createInitialPartition(int ArraySize, double *FirstColumn, double *SecondColumn, double *FirstCluster, double *SecondCluster)
 {
 	int index;
 
@@ -216,7 +295,7 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 	SecondCluster[0]=currentMaximumOne;
 
 	SecondCluster[1]=currentMaximumTwo;
-	
+
 	localArraySize=removeElementAndReallocateArray(FirstColumn, minOneIndex, ArraySize);
 
 	ArraySize=localArraySize;
@@ -233,7 +312,7 @@ void createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCo
 
 	ArraySize=localArraySize;
 
-	printf("The new array size (from the createInitialPartition function) is: %d \n", ArraySize);
+	//printf("The new array size (from the createInitialPartition function) is: %d \n", ArraySize);
 
 	return ArraySize;
 }
@@ -336,7 +415,6 @@ int main(int argc, char* argv[])
 
 	threadData.arraySize=newArraySize;
 
-	/*
 	printf("The inital partitions are:\n");
 
 	int position;
@@ -351,14 +429,13 @@ int main(int argc, char* argv[])
 	printf("\n");
 
 	printf("\n");
-	*/
 
 	/*allocate space for thread array*/
 	pthread_t* threadArray=malloc(arraySize*sizeof(pthread_t));
 
 	pthread_t someThread;
 
-	//pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
+	pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
 
 	/*
 	use long just in case code is run on a 64-bit system
