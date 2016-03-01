@@ -351,7 +351,7 @@ int main(int argc, char* argv[])
 {
 	if(argc!=2)
 	{
-		fprintf(stderr, "Incorrect number of command line arguments. Program will exit gracefully now...");
+		fprintf(stderr, "Incorrect number of command line arguments. The program will exit gracefully now...");
 
 		exit(0);
 	}
