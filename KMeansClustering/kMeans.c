@@ -41,10 +41,12 @@ void addElementToArray(double *Array, int ArraySize, double Element)
 		if(Array[index]==0.0)
 		{
 			printf("Spot %d has the value 0.0 \n", index);
-		}
-		else
-		{
-			printf("Spot %d has the value %g \n", index, Array[index]);
+
+			printf("\n");
+
+			printf("Going to insert %g into spot %d \n \n", Element, index);
+
+			break;
 		}
 	}
 }
@@ -160,7 +162,7 @@ void* kMeans(void *parameters)
 
 	printf("Values in the kmeans function:\n");
 
-	for(index=0;index<threadData->arraySize-(threadData->arraySize-1);++index)
+	for(index=0;index<threadData->arraySize-(threadData->arraySize-2);++index)
 	{
 		printf("%g %g \n", threadData->firstColumn[index], threadData->secondColumn[index]);
 
@@ -188,29 +190,49 @@ void* kMeans(void *parameters)
 		/*calculates the euclidean distance between the coordinate and the mean of the second cluster using the standard distance function*/
 		secondEuclideanDistance=sqrt(pow((x1+x3), 2)+pow((y1+y3),2));
 
-		addElementToArray(threadData->firstCluster, threadData->arraySize, x1);
-
-		/*
 		if(firstEuclideanDistance < secondEuclideanDistance)
 		{
-			//remove elements from their respective columns
-			//removeElementAndReallocateArray(threadData->firstColumn, index);
+			printf("Going to insert %g into the first cluster \n", x1);
 
-			//removeElementAndReallocateArray(threadData->secondColumn, index);
+			printf("\n");
+
+			//remove elements from their respective columns
+			int size1=removeElementAndReallocateArray(threadData->firstColumn, index, threadData->arraySize);
+
+			threadData->arraySize=size1;
+
+			int size2=removeElementAndReallocateArray(threadData->secondColumn, index, threadData->arraySize);
+
+			threadData->arraySize=size2;
 
 			//add the coordinate to the first cluster
-
+			addElementToArray(threadData->firstCluster, threadData->arraySize, x1);
 		}
 		else
 		{
+			printf("Going to insert %g into the second cluster \n", x1);
+
+			printf("\n");
+
 			//remove elements from their respective columns
+			int size1=removeElementAndReallocateArray(threadData->firstColumn, index, threadData->arraySize);
+
+			threadData->arraySize=size1;
+
+			int size2=removeElementAndReallocateArray(threadData->secondColumn, index, threadData->arraySize);
+
+			threadData->arraySize=size2;
 
 			//add the coordinate to the second cluster
-		}
-		*/
+			addElementToArray(threadData->secondCluster, threadData->arraySize, x1);
+		}	
 	}
 
+	printArray(threadData->firstColumn, threadData->arraySize);
+
 	printf("\n");
+
+	printArray(threadData->secondColumn, threadData->arraySize);
 	
 	return NULL;
 }
@@ -295,6 +317,14 @@ int createInitialPartition(int ArraySize, double *FirstColumn, double *SecondCol
 	SecondCluster[0]=currentMaximumOne;
 
 	SecondCluster[1]=currentMaximumTwo;
+
+	/*set the rest of the array spots to 0.0; this will come in handy later*/
+	for(index=2;index<ArraySize;++index)
+	{
+		FirstCluster[index]=0.0;
+
+		SecondCluster[index]=0.0;
+	}
 
 	localArraySize=removeElementAndReallocateArray(FirstColumn, minOneIndex, ArraySize);
 
