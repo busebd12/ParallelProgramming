@@ -358,8 +358,6 @@ int main(int argc, char* argv[])
 
 	FILE *inputFile=fopen(argv[1], "r");
 
-	//some comment
-
 	if(inputFile==NULL)
 	{
 		fprintf(stderr, "Cannot open %s", argv[1]);
