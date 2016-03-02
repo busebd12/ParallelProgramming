@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
+#include <numeric>
+#include <functional>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -46,6 +48,22 @@ double getRandomSample(ThreadData & T, int VectorPosition, int SamplePosition)
 	double sample=T.dataVector.at(VectorPosition).at(SamplePosition);
 
 	return sample;
+}
+
+double calculateClusterMean(const vector<double> & Cluster)
+{
+	int sum=accumulate(begin(Cluster), end(Cluster), 0);
+
+	int size=Cluster.size();
+
+	double mean=(double)(sum/size);
+
+	return mean;
+}
+
+void addSampleToCluster(vector<double> & Cluster, double Sample)
+{
+	Cluster.push_back(Sample);
 }
 
 void createClusters(ThreadData & T)
