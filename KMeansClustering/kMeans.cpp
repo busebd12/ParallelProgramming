@@ -5,8 +5,17 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <random>
 #include <pthread.h>
 using namespace std;
+
+int numberOfColumns;
+
+int numberOfDataPoints;
+
+int numberOfClusters;
+
+int numberOfProcessors;
 
 struct ThreadData
 {
@@ -17,9 +26,62 @@ struct ThreadData
 	int sizeOfDataVector;
 };
 
-void createClusters(ThreadData & T, int NumberOfClusters)
+void printClusters(const ThreadData & T)
 {
-	
+	cout << "Clusters:" << endl;
+
+	for(const auto & cluster : T.clusters)
+	{
+		for(const auto & sample : cluster)
+		{
+			cout << sample << " ";
+		}
+
+		cout << endl;
+	}
+}
+
+double getRandomSample(ThreadData & T, int VectorPosition, int SamplePosition)
+{
+	double sample=T.dataVector.at(VectorPosition).at(SamplePosition);
+
+	return sample;
+}
+
+void createClusters(ThreadData & T)
+{
+	vector<double> dataHolder;
+
+	random_device randomDevice;
+
+	mt19937 generator(randomDevice());
+
+	for(int count=0;count<numberOfClusters;++count)
+	{
+		uniform_int_distribution<> distribution(1, numberOfDataPoints);
+
+		int positionOfRandomSample=distribution(generator);
+
+		double randomSample=getRandomSample(T, count, positionOfRandomSample);
+
+		dataHolder.push_back(randomSample);
+	}
+
+	int x=0;
+
+	while(x < numberOfClusters)
+	{
+		vector<double> temp;
+
+		for(int index=x;index<dataHolder.size();index+=numberOfClusters)
+		{
+			temp.push_back(dataHolder.at(index));
+		}
+
+		T.clusters.push_back(temp);
+
+		x++;
+	}
 }
 
 void* kMeans(void *parameters)
@@ -50,10 +112,6 @@ void readInData(ifstream & File, ThreadData & T)
 
 	int input;
 
-	int numberOfColumns;
-
-	int numberOfDataPoints;
-
 	while(count < 2)
 	{
 		File >> input;
@@ -77,6 +135,8 @@ void readInData(ifstream & File, ThreadData & T)
 	cout << endl;
 
 	cout << "The number of columns is " << numberOfColumns << endl;
+
+	cout << endl;
 
 	string s1, s2;
 
@@ -173,9 +233,9 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	int numberOfClusters=atoi(argv[1]);
+	numberOfClusters=atoi(argv[1]);
 
-	int numberOfProcessors=atoi(argv[2]);
+	numberOfProcessors=atoi(argv[2]);
 
 	ifstream infile;
 
@@ -185,25 +245,15 @@ int main(int argc, char *argv[])
 
 	readInData(infile, threadData);
 
-	cout << "The size of the vectors of vectors is: " << threadData.sizeOfDataVector << endl;
+	createClusters(threadData);
 
-	cout << endl;
+	printClusters(threadData);
 
+	/*
 	pthread_t someThread;
-
-	cout << "After declaring our thread" << endl;
-
-	cout << endl;
-
-	cout << "Before creating the thread" << endl;
-
-	cout << endl;
 
 	pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
 
-	cout << "After the call to the pthread_create function" << endl;
-
-	cout << endl;
-
 	pthread_join(someThread, NULL);
+	*/
 }
