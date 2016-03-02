@@ -6,6 +6,7 @@
 #include <functional>
 #include <fstream>
 #include <string>
+#include <complex>
 #include <sstream>
 #include <random>
 #include <pthread.h>
@@ -43,6 +44,8 @@ void printClusters(const ThreadData & T)
 
 		cout << endl;
 	}
+
+	cout << endl;
 }
 
 double getRandomSample(ThreadData & T, int VectorPosition, int SamplePosition)
@@ -123,6 +126,35 @@ void* kMeans(void *parameters)
 	ThreadData *threadData=(ThreadData*)parameters;
 
 	calculateClusterMeans(threadData->clusters, threadData->clusterMeans);
+
+	for(int index=0;index<1;++index)
+	{
+		int yCoordinate=0;
+
+		while(yCoordinate < numberOfDataPoints)
+		{
+			int xCoordinate=0;
+
+			vector<double> samplePoint;
+
+			samplePoint.reserve(numberOfColumns);
+
+			while(xCoordinate < numberOfColumns)
+			{
+				cout << "Looking at the point: " << "(" << threadData->dataVector[xCoordinate][yCoordinate] << ", " << threadData->dataVector[xCoordinate][yCoordinate] << ")" << endl;
+
+				cout << endl;
+
+				double sample=threadData->dataVector[xCoordinate][yCoordinate];
+
+				samplePoint.push_back(sample);
+
+				xCoordinate++;
+			}
+
+			yCoordinate++;
+		}
+	}
 	
 	return NULL;
 }
