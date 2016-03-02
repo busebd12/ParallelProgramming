@@ -25,6 +25,8 @@ struct ThreadData
 
 	vector<vector<double>> clusters;
 
+	vector<double> clusterMeans;
+
 	int sizeOfDataVector;
 };
 
@@ -50,15 +52,25 @@ double getRandomSample(ThreadData & T, int VectorPosition, int SamplePosition)
 	return sample;
 }
 
-double calculateClusterMean(const vector<double> & Cluster)
+double calculateClusterMeanHelper(vector<double> & Cluster)
 {
-	int sum=accumulate(begin(Cluster), end(Cluster), 0);
-
 	int size=Cluster.size();
+
+	double sum=accumulate(Cluster.begin(), Cluster.end(), 0.0);
 
 	double mean=(double)(sum/size);
 
 	return mean;
+}
+
+void calculateClusterMeans(vector<vector<double>> & Clusters, vector<double> & ClusterMeans)
+{
+	for(auto & cluster : Clusters)
+	{
+		double clusterMean=calculateClusterMeanHelper(cluster);
+
+		ClusterMeans.push_back(clusterMean);
+	}
 }
 
 void addSampleToCluster(vector<double> & Cluster, double Sample)
@@ -93,6 +105,10 @@ void createClusters(ThreadData & T)
 
 		for(int index=x;index<dataHolder.size();index+=numberOfClusters)
 		{
+			cout << "Adding " << dataHolder[index] << " to cluster " << x << endl;
+
+			cout << endl;
+
 			temp.push_back(dataHolder.at(index));
 		}
 
@@ -104,15 +120,9 @@ void createClusters(ThreadData & T)
 
 void* kMeans(void *parameters)
 {
-	cout << "Hello, from the kMeans function" << endl;
-
-	cout << endl;
-
 	ThreadData *threadData=(ThreadData*)parameters;
 
-	cout << "The size of the data vector in the kMeans function is: " << threadData->sizeOfDataVector << endl;
-
-	cout << endl;	
+	calculateClusterMeans(threadData->clusters, threadData->clusterMeans);
 	
 	return NULL;
 }
@@ -267,11 +277,9 @@ int main(int argc, char *argv[])
 
 	printClusters(threadData);
 
-	/*
 	pthread_t someThread;
 
 	pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
 
 	pthread_join(someThread, NULL);
-	*/
 }
