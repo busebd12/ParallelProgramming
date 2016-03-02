@@ -9,6 +9,7 @@
 #include <complex>
 #include <sstream>
 #include <random>
+#include <cmath>
 #include <pthread.h>
 using namespace std;
 
@@ -150,6 +151,72 @@ void* kMeans(void *parameters)
 				samplePoint.push_back(sample);
 
 				xCoordinate++;
+			}
+
+			/*calculate all the parts used by the distance function*/
+			for(int position=0;position<samplePoint.size();++position)
+			{
+				for(int spot=0;spot<threadData->clusterMeans.size();++spot)
+				{
+					vector<double> euclideanDistances;
+
+					vector<double> distanceFunctionParts;
+
+					double part;
+
+					if(position==spot)
+					{
+						//first part of the distance function calculation
+						part=pow((samplePoint.at(position)+threadData->clusterMeans.at(spot)), 2);
+					}
+					else
+					{
+						//the rest of the distance function calculation
+						part=pow((samplePoint.at(position)+0.0), 2);
+					}
+
+					distanceFunctionParts.push_back(part);
+
+					int sum {};
+
+					/*take the square root of the sum of the parts of the distance formula*/
+					for(int index=0;index<distanceFunctionParts;++index)
+					{
+						sum+=distanceFunctionParts.at(index);
+					}
+
+					/*take the square root of the sum*/
+					double euclideanDistance=(double)sqrt(sum);
+
+					euclideanDistances.push_back(euclideanDistance);
+
+					/*clear the vector so we can use it for the next pair of coordinates*/
+					distanceFunctionParts.clear();
+
+					auto smallestEuclideanDistance=min_element(eucildeanDistances.begin(), euclideanDistance.end())
+
+					int positionOfCluster;
+
+
+					/*becuase we used push_back to insert into the euclideanDistance vector
+					the order of the distances will match the order of the clusters in our vector holding the clusters
+					so, the position of the smallest euclidean distance will correspond to the position of the cluster
+					we want to add our coordinate to*
+					*/
+					for(int position=0;position<euclideanDistances.size();++position)
+					{
+						if(euclideanDistances.at(position)==*(smallestEuclideanDistance))
+						{
+							positionOfCluster=position;
+						}
+					}
+
+					addCoordinateToCluster(threadData->clusters, positionOfCluster, samplePoint);
+
+					samplePoint.clear();
+
+					calculateClusterMeans(threadData->clusterMeans);
+				}
 			}
 
 			yCoordinate++;
