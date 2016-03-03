@@ -25,9 +25,11 @@ int numberOfProcessors;
 
 pthread_mutex_t kmeansMutex;
 
+pthread_mutex_t secondKmeansMutex;
+
 pthread_cond_t kmeansConditionVariable;
 
-
+vector<vector<float>> buckets;
 
 struct ThreadData
 {
@@ -41,6 +43,16 @@ struct ThreadData
 };
 
 ThreadData threadData;
+
+void printVector(vector<float> & V)
+{
+	for(const auto & element : V)
+	{
+		cout << element << " ";
+	}
+
+	cout << endl;
+}
 
 void printDataVector()
 {
@@ -72,7 +84,7 @@ void printClusters()
 	cout << endl;
 }
 
-void calculateClusterMeans(vector<vector<float>> Buckets)
+void calculateClusterMeans()
 {
 	vector<vector<float>> finalResult;
 
@@ -83,13 +95,13 @@ void calculateClusterMeans(vector<vector<float>> Buckets)
 		vec.resize(numberOfColumns);
 	}
 
-	for(int x=0;x<Buckets.size();++x)
+	for(int x=0;x<buckets.size();++x)
 	{
-		for(int y=0;y<Buckets.at(x).size();++y)
+		for(int y=0;y<buckets.at(x).size();++y)
 		{
 			int temp=y%numberOfColumns;
 
-			finalResult.at(x).at(temp)+=Buckets.at(x).at(y);
+			finalResult.at(x).at(temp)+=buckets.at(x).at(y);
 		}
 	}
 
@@ -99,7 +111,7 @@ void calculateClusterMeans(vector<vector<float>> Buckets)
 	{
 		for(int b=0;b<finalResult.at(a).size();++b)
 		{
-			finalResult.at(a).at(b)= finalResult.at(a).at(b) / (Buckets.at(a).size()/numberOfColumns);
+			finalResult.at(a).at(b)= finalResult.at(a).at(b) / (buckets.at(a).size()/numberOfColumns);
 
 			threadData.clusters.at(a)=finalResult.at(a);
 		}
@@ -199,12 +211,18 @@ void* kMeans(void *parameters)
 
 	int myEnd=threadRank*chunkSize+chunkSize;
 
+	cout << "Before the if-statement" << endl;
+
+	cout << endl;
+
 	if(threadRank==numberOfProcessors-1)
 	{
-		myEnd=numberOfDataPoints-numberOfColumns;
-	}
+		cout << "Inside if-statement" << endl;
 
-	vector<vector<float>> buckets;
+		cout << endl;
+
+		myEnd=numberOfDataPoints-numberOfColumns-1;
+	}
 
 	buckets.resize(numberOfClusters);
 
@@ -216,32 +234,70 @@ void* kMeans(void *parameters)
 
 	vector<float> elements;
 
-	for(int n=myStart;n<=myEnd;++n)
-	{
-		pthread_mutex_lock(&kmeansMutex);
+	cout << "Before the nested for loops" << endl;
 
-		for(int k=n+1;k<n;++k)
+	cout << endl;
+
+	for(int n=myStart;n<=myEnd-1;++n)
+	{
+		
+
+		cout << "Before locking the mutex" << endl;
+
+		cout << endl;
+
+		for(int k=0;k<threadData.clusters.size();++k)
 		{	
+			cout << "Inside the second for loop" << endl;
+
+			cout << endl;
+
+			cout << "N: " << n << endl;
+
+			cout << endl;
+
+			cout << "thread " << threadRank << endl;
+
+			cout << endl;
+
+
 			result=calculateDistance(threadData.dataVector.at(n), threadData.clusters.at(k));
+
+			cout << "After calling calculating distance function" << endl;
+
+			cout << endl;
 
 			if(minimum > result)
 			{
+				cout << "Inside the second if-statement" << endl;
+
+				cout << endl;
+
 				minimum=result;
 
 				spot=k;
 				
-				elements=threadData.dataVector.at(n);
+			}
+			if(k==threadData.clusters.size()-1)
+			{
+				pthread_mutex_lock(&kmeansMutex);
+
+				buckets[spot]=(threadData.dataVector.at(n));
+				
+				pthread_cond_broadcast(&kmeansConditionVariable);
+
+				//buckets.at(spot).insert(buckets.at(spot).end(), threadData.dataVector.at(n).begin(), threadData.dataVector.at(n).end());
+				pthread_mutex_unlock(&kmeansMutex);
 			}
 		}
 
-		for(int b=0;b<numberOfColumns;++b)
-		{
-			buckets.at(spot).push_back(elements.at(b));
-		}	
-
 		minimum=INT_MAX;
 
-		pthread_mutex_unlock(&kmeansMutex);
+		cout << "Before unlocking the mutex" << endl;
+
+		cout << endl;
+
+		
 	}
 
 	cout << "Bucket vector after:" << endl;
@@ -256,7 +312,8 @@ void* kMeans(void *parameters)
 		cout << endl;
 	}
 
-	calculateClusterMeans(buckets);
+
+
 	
 	return NULL;
 }
@@ -412,9 +469,15 @@ int main(int argc, char *argv[])
 	/*Initialize mutex and condition variable objects*/
 	pthread_mutex_init(&kmeansMutex, NULL);
 
+	pthread_mutex_init(&secondKmeansMutex, NULL);
+
+	pthread_cond_init(&kmeansConditionVariable, NULL);
+
 	long thread;
 
-	threadHandles = malloc(numberOfProcessors * sizeof(pthread_t));
+	threadHandles=(pthread_t*)malloc(numberOfProcessors * sizeof(pthread_t));
+
+	tic();
 
 	for(thread=0;thread<numberOfProcessors;++thread)
 	{
@@ -426,7 +489,19 @@ int main(int argc, char *argv[])
 		pthread_join(threadHandles[thread], NULL);
 	}
 
-	pthread_mutex_destroy(&kmeansMutex);
-	free(threadHandles);
+	toc();
 
+	cout << "Elapsed time: " << etime() << endl;
+
+	cout << endl;
+
+	calculateClusterMeans();
+	
+	pthread_mutex_destroy(&kmeansMutex);
+
+	pthread_mutex_destroy(&secondKmeansMutex);
+
+	pthread_cond_destroy(&kmeansConditionVariable);
+
+	free(threadHandles);
 }
