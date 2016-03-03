@@ -23,6 +23,8 @@ int numberOfClusters;
 
 int numberOfProcessors;
 
+int bucketPlace;
+
 pthread_mutex_t kmeansMutex;
 
 pthread_mutex_t secondKmeansMutex;
@@ -99,7 +101,15 @@ void calculateClusterMeans()
 	{
 		for(int y=0;y<buckets.at(x).size();++y)
 		{
+			cout << "buckets.at(x).at(y):" << buckets.at(x).at(y) << endl;
+
+			cout << endl;
+
 			int temp=y%numberOfColumns;
+
+			cout << "temp: " << temp << endl;
+
+			//cout << endl;
 
 			finalResult.at(x).at(temp)+=buckets.at(x).at(y);
 		}
@@ -107,27 +117,31 @@ void calculateClusterMeans()
 
 	printClusters();
 
-	for(int a=0;a<finalResult.size();++a)
+	for(int a=0;a<threadData.clusters.size();++a)
 	{
-		for(int b=0;b<finalResult.at(a).size();++b)
+		for(int b=0;b<threadData.clusters.at(a).size();++b)
 		{
 			finalResult.at(a).at(b)= finalResult.at(a).at(b) / (buckets.at(a).size()/numberOfColumns);
 
-			threadData.clusters.at(a)=finalResult.at(a);
+			if(isnan(finalResult.at(a).at(b)))
+			{
+				cout << "a: " << a <<  " b: " << b << endl;
+
+				cout << "finalResult.at(a).at(b) is nan and threadData.clusters.at(a).at(b) is: " << threadData.clusters.at(a).at(b) << endl;
+
+				cout << endl;
+
+				finalResult.at(a).at(b)=threadData.clusters.at(a).at(b);
+			}
+
+
+			threadData.clusters.at(a).at(b)=finalResult.at(a).at(b);
 		}
 	}
 
 	cout << "Final result vector:" << endl;
 
-	for(const auto & bucket : finalResult)
-	{
-		for(const auto & element : bucket)
-		{
-			cout << element << " ";
-		}
-
-		cout << endl;
-	}
+	printClusters();
 }
 
 void createClusters()
@@ -140,7 +154,7 @@ void createClusters()
 
 	mt19937 generator(randomDevice());
 
-	uniform_int_distribution<int> distribution(1, (numberOfDataPoints-1));
+	uniform_int_distribution<int> distribution(1, ((numberOfDataPoints/numberOfColumns)-1));
 
 	vector<int> randomPositions;
 
@@ -193,10 +207,16 @@ float calculateDistance(vector<float> & N, vector<float> & K)
 
 	for(int location=0;location<N.size();++location)
 	{
+		//cout << "Calculating the distance between " << K.at(location) << " and " << N.at(location) << endl;
+
+		//cout << endl;
+
 		sum+=pow((K.at(location)-N.at(location)), 2);
 	}
 
 	sum=sqrt(sum);
+
+	cout << "Return sum of: " << sum << endl;
 
 	return sum;
 }
@@ -205,23 +225,27 @@ void* kMeans(void *parameters)
 {
 	long threadRank=(long)parameters;
 
-	int chunkSize=(numberOfProcessors-numberOfColumns)/numberOfProcessors;
+	cout<<"KMeans"<<endl;
 
-	int myStart=threadRank*chunkSize+1;
+	int chunkSize=(numberOfDataPoints-numberOfClusters)/numberOfProcessors;
+
+	int myStart=threadRank*chunkSize;
 
 	int myEnd=threadRank*chunkSize+chunkSize;
 
-	cout << "Before the if-statement" << endl;
+	//cout << "Before the if-statement" << endl;
 
 	cout << endl;
 
 	if(threadRank==numberOfProcessors-1)
 	{
-		cout << "Inside if-statement" << endl;
+		//cout << "Inside if-statement" << endl;
+
+		//cout<<threadRank<<" threadRank inside statement"<<endl;
 
 		cout << endl;
 
-		myEnd=numberOfDataPoints-numberOfColumns-1;
+		myEnd=numberOfDataPoints-numberOfClusters;
 	}
 
 	buckets.resize(numberOfClusters);
@@ -234,20 +258,22 @@ void* kMeans(void *parameters)
 
 	vector<float> elements;
 
-	cout << "Before the nested for loops" << endl;
+	//cout << "Before the nested for loops" << endl;
 
-	cout << endl;
+	//pthread_mutex_lock(&kmeansMutex);
 
-	for(int n=myStart;n<=myEnd-1;++n)
+	//cout<<myStart<<" :myStart, "<<myEnd<<" myEnd"<<endl;
+
+
+	for(int n=myStart;n<myEnd;++n)
 	{
-		
+		//cout << "Before locking the mutex" << endl;
 
-		cout << "Before locking the mutex" << endl;
-
-		cout << endl;
-
+		//cout << endl;
+		pthread_mutex_lock(&kmeansMutex);
 		for(int k=0;k<threadData.clusters.size();++k)
 		{	
+			/*
 			cout << "Inside the second for loop" << endl;
 
 			cout << endl;
@@ -259,62 +285,52 @@ void* kMeans(void *parameters)
 			cout << "thread " << threadRank << endl;
 
 			cout << endl;
-
+			*/
 
 			result=calculateDistance(threadData.dataVector.at(n), threadData.clusters.at(k));
 
+			/*
 			cout << "After calling calculating distance function" << endl;
 
 			cout << endl;
+			*/
 
 			if(minimum > result)
 			{
-				cout << "Inside the second if-statement" << endl;
+				//cout << "Inside the second if-statement" << endl;
 
-				cout << endl;
+				//cout << endl;
 
 				minimum=result;
 
 				spot=k;
 				
 			}
+
 			if(k==threadData.clusters.size()-1)
 			{
-				pthread_mutex_lock(&kmeansMutex);
 
-				buckets[spot]=(threadData.dataVector.at(n));
-				
-				pthread_cond_broadcast(&kmeansConditionVariable);
+				cout<<"Adds to Bucket"<<endl;
 
-				//buckets.at(spot).insert(buckets.at(spot).end(), threadData.dataVector.at(n).begin(), threadData.dataVector.at(n).end());
-				pthread_mutex_unlock(&kmeansMutex);
+				for(int index=0;index<numberOfColumns;++index)
+				{
+					buckets.at(spot).push_back(threadData.dataVector.at(n).at(index));
+				}
 			}
 		}
 
 		minimum=INT_MAX;
+		pthread_mutex_unlock(&kmeansMutex);
 
-		cout << "Before unlocking the mutex" << endl;
+		//cout << "Before unlocking the mutex" << endl;
 
-		cout << endl;
-
-		
+		//cout << endl;
 	}
 
-	cout << "Bucket vector after:" << endl;
+	//pthread_cond_broadcast(&kmeansConditionVariable);
 
-	for(const auto & bucket : buckets)
-	{
-		for(const auto & element : bucket)
-		{
-			cout << element << " ";
-		}
+	//pthread_mutex_unlock(&kmeansMutex);
 
-		cout << endl;
-	}
-
-
-
-	
 	return NULL;
 }
 
@@ -419,14 +435,16 @@ void readInData(ifstream & File)
 
 		counter++;
 	}
-
-	for(int index=0;index<dataHolder.size();index+=numberOfColumns)
+	int place = 0;
+	for(int index=0;index<dataHolder.size()-numberOfColumns;index++)
 	{
 		vector<float> temp;
-
-		for(int position=index;position<(numberOfColumns+index);++position)
+		place=0;
+		while(place<numberOfColumns && index<dataHolder.size())
 		{
 			temp.push_back(dataHolder.at(index));
+			index++;
+			place++;
 		}
 
 		/*
@@ -434,13 +452,16 @@ void readInData(ifstream & File)
 
 		cout << endl;
 		*/
-
+		cout<<index<<endl;
+		cout<<temp.size()<<endl;;
 		threadData.dataVector.push_back(temp);
 	}
+	cout<<"getsout"<<endl;
 }
 
 int main(int argc, char *argv[])
 {
+	bucketPlace =0;
 	if(argc!=4)
 	{
 		cerr << "Incorrect number of command line arguments. The program will exit gracefully, now..." << endl;
@@ -460,24 +481,39 @@ int main(int argc, char *argv[])
 
 	readInData(infile);
 
-	printDataVector();
+	//printDataVector();
 
 	createClusters();
-
-	printClusters();
 
 	/*Initialize mutex and condition variable objects*/
 	pthread_mutex_init(&kmeansMutex, NULL);
 
-	pthread_mutex_init(&secondKmeansMutex, NULL);
-
-	pthread_cond_init(&kmeansConditionVariable, NULL);
-
 	long thread;
 
-	threadHandles=(pthread_t*)malloc(numberOfProcessors * sizeof(pthread_t));
+	threadHandles=new pthread_t[numberOfProcessors];
+	//threadHandles = malloc(numberOfProcessors*sizeof(pthread_t));
+	vector<vector<float>> sampleCluster;
+	sampleCluster.resize(numberOfClusters);
 
+	for(auto & vec : sampleCluster)
+	{
+		vec.resize(numberOfColumns);
+	}
+
+	int check =0;
+	int base=0;
 	tic();
+
+	for(int i = 0; i<100; i++)
+	{
+
+		for(int a = 0; a<threadData.clusters.size(); a++)
+		{
+			for(int b = 0; b<threadData.clusters.at(a).size(); b++)
+			{
+				sampleCluster.at(a).at(b) = threadData.clusters.at(a).at(b);
+			}
+		}
 
 	for(thread=0;thread<numberOfProcessors;++thread)
 	{
@@ -489,19 +525,44 @@ int main(int argc, char *argv[])
 		pthread_join(threadHandles[thread], NULL);
 	}
 
+
+	cout << "Bucket vector after:" << endl;
+
+	for(const auto & bucket : buckets)
+	{
+		for(const auto & element : bucket)
+		{
+			cout << element << " ";
+		}
+
+		cout << endl;
+	}
+
+	calculateClusterMeans();
+	
+	pthread_mutex_destroy(&kmeansMutex);
+
+	for(int a = 0; a<threadData.clusters.size(); a++)
+	{
+		for(int b = 0; b<threadData.clusters.at(a).size(); b++)
+		{
+			base++;
+			if(sampleCluster.at(a).at(b) == threadData.clusters.at(a).at(b))
+				check++;
+		}
+	}
+	if(check==base)
+	{
+		break;
+	}
+	cout<<i<<" The End"<<endl;
+	}
+
 	toc();
 
 	cout << "Elapsed time: " << etime() << endl;
 
 	cout << endl;
 
-	calculateClusterMeans();
-	
-	pthread_mutex_destroy(&kmeansMutex);
-
-	pthread_mutex_destroy(&secondKmeansMutex);
-
-	pthread_cond_destroy(&kmeansConditionVariable);
-
-	free(threadHandles);
+	delete [] threadHandles;
 }
