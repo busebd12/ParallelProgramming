@@ -27,10 +27,6 @@ int bucketPlace;
 
 pthread_mutex_t kmeansMutex;
 
-pthread_mutex_t secondKmeansMutex;
-
-pthread_cond_t kmeansConditionVariable;
-
 vector<vector<float>> buckets;
 
 struct ThreadData
@@ -50,10 +46,10 @@ void printVector(vector<float> & V)
 {
 	for(const auto & element : V)
 	{
-		cout << element << " ";
+		//cout << element << " ";
 	}
 
-	cout << endl;
+	//cout << endl;
 }
 
 void printDataVector()
@@ -62,28 +58,28 @@ void printDataVector()
 	{
 		for(const auto & element : vec)
 		{
-			cout << element << " ";
+			//cout << element << " ";
 		}
 
-		cout << endl;
+		//cout << endl;
 	}
 }
 
 void printClusters()
 {
-	cout << "Clusters:" << endl;
+	//cout << "Clusters:" << endl;
 
 	for(const auto & cluster : threadData.clusters)
 	{
 		for(const auto & sample : cluster)
 		{
-			cout << sample << " ";
+			//cout << sample << " ";
 		}
 
-		cout << endl;
+		//cout << endl;
 	}
 
-	cout << endl;
+	//cout << endl;
 }
 
 void calculateClusterMeans()
@@ -101,13 +97,13 @@ void calculateClusterMeans()
 	{
 		for(int y=0;y<buckets.at(x).size();++y)
 		{
-			cout << "buckets.at(x).at(y):" << buckets.at(x).at(y) << endl;
+			//cout << "buckets.at(x).at(y):" << buckets.at(x).at(y) << endl;
 
-			cout << endl;
+			//cout << endl;
 
 			int temp=y%numberOfColumns;
 
-			cout << "temp: " << temp << endl;
+			//cout << "temp: " << temp << endl;
 
 			//cout << endl;
 
@@ -115,40 +111,39 @@ void calculateClusterMeans()
 		}
 	}
 
-	printClusters();
+	//printClusters();
 
 	for(int a=0;a<threadData.clusters.size();++a)
 	{
 		for(int b=0;b<threadData.clusters.at(a).size();++b)
 		{
-			finalResult.at(a).at(b)= finalResult.at(a).at(b) / (buckets.at(a).size()/numberOfColumns);
+			finalResult.at(a).at(b)=finalResult.at(a).at(b) / (buckets.at(a).size()/numberOfColumns);
 
 			if(isnan(finalResult.at(a).at(b)))
 			{
-				cout << "a: " << a <<  " b: " << b << endl;
+				//cout << "a: " << a <<  " b: " << b << endl;
 
-				cout << "finalResult.at(a).at(b) is nan and threadData.clusters.at(a).at(b) is: " << threadData.clusters.at(a).at(b) << endl;
+				//cout << "finalResult.at(a).at(b) is nan and threadData.clusters.at(a).at(b) is: " << threadData.clusters.at(a).at(b) << endl;
 
-				cout << endl;
+				//cout << endl;
 
 				finalResult.at(a).at(b)=threadData.clusters.at(a).at(b);
 			}
-
 
 			threadData.clusters.at(a).at(b)=finalResult.at(a).at(b);
 		}
 	}
 
-	cout << "Final result vector:" << endl;
+	//cout << "Final result vector:" << endl;
 
-	printClusters();
+	//printClusters();
 }
 
 void createClusters()
 {
-	cout << "In create clusters function" << endl;
+	//cout << "In create clusters function" << endl;
 
-	cout << endl;
+	//cout << endl;
 
 	random_device randomDevice;
 
@@ -166,13 +161,13 @@ void createClusters()
 
 	for(int count=0;count<numberOfClusters;++count)
 	{
-		cout << "randomPositions size: " << randomPositions.size() << endl;
+		//cout << "randomPositions size: " << randomPositions.size() << endl;
 
-		cout << endl;
+		//cout << endl;
 
 		randomPosition=distribution(generator);
 
-		cout << "Random number: " << randomPosition << endl;
+		//cout << "Random number: " << randomPosition << endl;
 
 		randomPositions.push_back(randomPosition);	
 	}
@@ -198,7 +193,7 @@ void createClusters()
 		}
 	}
 
-	printClusters();
+	//printClusters();
 }
 
 float calculateDistance(vector<float> & N, vector<float> & K)
@@ -216,7 +211,7 @@ float calculateDistance(vector<float> & N, vector<float> & K)
 
 	sum=sqrt(sum);
 
-	cout << "Return sum of: " << sum << endl;
+	//cout << "Return sum of: " << sum << endl;
 
 	return sum;
 }
@@ -225,9 +220,9 @@ void* kMeans(void *parameters)
 {
 	long threadRank=(long)parameters;
 
-	cout<<"KMeans"<<endl;
+	//cout<<"KMeans"<<endl;
 
-	int chunkSize=(numberOfDataPoints-numberOfClusters)/numberOfProcessors;
+	int chunkSize=((numberOfDataPoints/numberOfColumns)-numberOfClusters)/numberOfProcessors;
 
 	int myStart=threadRank*chunkSize;
 
@@ -235,7 +230,7 @@ void* kMeans(void *parameters)
 
 	//cout << "Before the if-statement" << endl;
 
-	cout << endl;
+	//cout << endl;
 
 	if(threadRank==numberOfProcessors-1)
 	{
@@ -243,20 +238,10 @@ void* kMeans(void *parameters)
 
 		//cout<<threadRank<<" threadRank inside statement"<<endl;
 
-		cout << endl;
+		//cout << endl;
 
-		myEnd=numberOfDataPoints-numberOfClusters;
+		myEnd=(numberOfDataPoints/numberOfColumns)-numberOfClusters;
 	}
-
-	buckets.resize(numberOfClusters);
-
-	float minimum=INT_MAX;
-
-	float result;
-
-	int spot=0;
-
-	vector<float> elements;
 
 	//cout << "Before the nested for loops" << endl;
 
@@ -267,39 +252,17 @@ void* kMeans(void *parameters)
 
 	for(int n=myStart;n<myEnd;++n)
 	{
-		//cout << "Before locking the mutex" << endl;
-
-		//cout << endl;
 		pthread_mutex_lock(&kmeansMutex);
+		float result =0;
+		int spot=0;
+		float minimum=INT_MAX;
 		for(int k=0;k<threadData.clusters.size();++k)
 		{	
-			/*
-			cout << "Inside the second for loop" << endl;
-
-			cout << endl;
-
-			cout << "N: " << n << endl;
-
-			cout << endl;
-
-			cout << "thread " << threadRank << endl;
-
-			cout << endl;
-			*/
 
 			result=calculateDistance(threadData.dataVector.at(n), threadData.clusters.at(k));
 
-			/*
-			cout << "After calling calculating distance function" << endl;
-
-			cout << endl;
-			*/
-
 			if(minimum > result)
 			{
-				//cout << "Inside the second if-statement" << endl;
-
-				//cout << endl;
 
 				minimum=result;
 
@@ -309,8 +272,6 @@ void* kMeans(void *parameters)
 
 			if(k==threadData.clusters.size()-1)
 			{
-
-				cout<<"Adds to Bucket"<<endl;
 
 				for(int index=0;index<numberOfColumns;++index)
 				{
@@ -322,14 +283,7 @@ void* kMeans(void *parameters)
 		minimum=INT_MAX;
 		pthread_mutex_unlock(&kmeansMutex);
 
-		//cout << "Before unlocking the mutex" << endl;
-
-		//cout << endl;
 	}
-
-	//pthread_cond_broadcast(&kmeansConditionVariable);
-
-	//pthread_mutex_unlock(&kmeansMutex);
 
 	return NULL;
 }
@@ -365,13 +319,13 @@ void readInData(ifstream & File)
 
 	threadData.sizeOfDataVector=(numberOfDataPoints*numberOfColumns);
 
-	cout << "The number of data points is " << numberOfDataPoints << endl;
+	//cout << "The number of data points is " << numberOfDataPoints << endl;
 
-	cout << endl;
+	//cout << endl;
 
-	cout << "The number of columns is " << numberOfColumns << endl;
+	//cout << "The number of columns is " << numberOfColumns << endl;
 
-	cout << endl;
+	//cout << endl;
 
 	string s1, s2;
 
@@ -452,11 +406,11 @@ void readInData(ifstream & File)
 
 		cout << endl;
 		*/
-		cout<<index<<endl;
-		cout<<temp.size()<<endl;;
+		//cout<<index<<endl;
+		//cout<<temp.size()<<endl;;
 		threadData.dataVector.push_back(temp);
 	}
-	cout<<"getsout"<<endl;
+	//cout<<"getsout"<<endl;
 }
 
 int main(int argc, char *argv[])
@@ -494,6 +448,7 @@ int main(int argc, char *argv[])
 	//threadHandles = malloc(numberOfProcessors*sizeof(pthread_t));
 	vector<vector<float>> sampleCluster;
 	sampleCluster.resize(numberOfClusters);
+	buckets.resize(numberOfClusters);
 
 	for(auto & vec : sampleCluster)
 	{
@@ -525,7 +480,7 @@ int main(int argc, char *argv[])
 		pthread_join(threadHandles[thread], NULL);
 	}
 
-
+	/*
 	cout << "Bucket vector after:" << endl;
 
 	for(const auto & bucket : buckets)
@@ -537,6 +492,7 @@ int main(int argc, char *argv[])
 
 		cout << endl;
 	}
+	*/
 
 	calculateClusterMeans();
 	
@@ -555,7 +511,7 @@ int main(int argc, char *argv[])
 	{
 		break;
 	}
-	cout<<i<<" The End"<<endl;
+	//cout<<i<<" The End"<<endl;
 	}
 
 	toc();
