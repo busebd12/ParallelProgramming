@@ -11,6 +11,7 @@
 #include <random>
 #include <cmath>
 #include <pthread.h>
+#include <climits>
 using namespace std;
 
 int numberOfColumns;
@@ -23,14 +24,27 @@ int numberOfProcessors;
 
 struct ThreadData
 {
-	vector<vector<double>> dataVector;
+	vector<vector<float>> dataVector;
 
-	vector<vector<double>> clusters;
+	vector<vector<float>> clusters;
 
-	vector<double> clusterMeans;
+	vector<float> clusterMeans;
 
 	int sizeOfDataVector;
 };
+
+void printDataVector(const ThreadData & T)
+{
+	for(const auto & vec : T.dataVector)
+	{
+		for(const auto & element : vec)
+		{
+			cout << element << " ";
+		}
+
+		cout << endl;
+	}
+}
 
 void printClusters(const ThreadData & T)
 {
@@ -49,179 +63,210 @@ void printClusters(const ThreadData & T)
 	cout << endl;
 }
 
-double getRandomSample(ThreadData & T, int VectorPosition, int SamplePosition)
+void addCoordinateToCluster(ThreadData & T, int PositionOfCluster, vector<float> & SamplePoint)
 {
-	double sample=T.dataVector.at(VectorPosition).at(SamplePosition);
-
-	return sample;
+	T.clusters.at(PositionOfCluster).insert(begin(T.clusters.at(PositionOfCluster)), SamplePoint.begin(), SamplePoint.end());
 }
 
-double calculateClusterMeanHelper(vector<double> & Cluster)
+float calculateClusterMeanHelper(vector<float> & Cluster)
 {
 	int size=Cluster.size();
 
-	double sum=accumulate(Cluster.begin(), Cluster.end(), 0.0);
+	float sum=accumulate(Cluster.begin(), Cluster.end(), 0.0);
 
-	double mean=(double)(sum/size);
+	float mean=(float)(sum/size);
 
 	return mean;
 }
 
-void calculateClusterMeans(vector<vector<double>> & Clusters, vector<double> & ClusterMeans)
+void calculateClusterMeans(vector<vector<float>> Buckets, ThreadData & T)
 {
-	for(auto & cluster : Clusters)
-	{
-		double clusterMean=calculateClusterMeanHelper(cluster);
+	vector<vector<float>> finalResult;
 
-		ClusterMeans.push_back(clusterMean);
+	finalResult.resize(numberOfClusters);
+
+	for(auto & vec : finalResult)
+	{
+		vec.resize(numberOfColumns);
+	}
+
+	for(int x=0;x<Buckets.size();++x)
+	{
+		for(int y=0;y<Buckets.at(x).size();++y)
+		{
+			int temp=y%numberOfColumns;
+
+			finalResult.at(x).at(temp)+=Buckets.at(x).at(y);
+		}
+	}
+
+	printClusters(T);
+
+	for(int a=0;a<finalResult.size();++a)
+	{
+		for(int b=0;b<finalResult.at(a).size();++b)
+		{
+			finalResult.at(a).at(b)= finalResult.at(a).at(b) / (Buckets.at(a).size()/numberOfColumns);
+
+			T.clusters.at(a)=finalResult.at(a);
+		}
+	}
+
+	cout << "Final result vector:" << endl;
+
+	for(const auto & bucket : finalResult)
+	{
+		for(const auto & element : bucket)
+		{
+			cout << element << " ";
+		}
+
+		cout << endl;
 	}
 }
 
-void addSampleToCluster(vector<double> & Cluster, double Sample)
+void addSampleToCluster(vector<float> & Cluster, float Sample)
 {
 	Cluster.push_back(Sample);
 }
 
 void createClusters(ThreadData & T)
 {
-	vector<double> dataHolder;
+	cout << "In create clusters function" << endl;
+
+	cout << endl;
 
 	random_device randomDevice;
 
 	mt19937 generator(randomDevice());
 
+	uniform_int_distribution<int> distribution(1, (numberOfDataPoints-1));
+
+	vector<int> randomPositions;
+
+	int randomPosition;
+
+	bool flag=true;
+
+	int check=0;
+
 	for(int count=0;count<numberOfClusters;++count)
 	{
-		uniform_int_distribution<> distribution(1, numberOfDataPoints);
+		cout << "randomPositions size: " << randomPositions.size() << endl;
 
-		int positionOfRandomSample=distribution(generator);
+		cout << endl;
 
-		double randomSample=getRandomSample(T, count, positionOfRandomSample);
+		randomPosition=distribution(generator);
 
-		dataHolder.push_back(randomSample);
+		cout << "Random number: " << randomPosition << endl;
+
+		randomPositions.push_back(randomPosition);	
 	}
 
-	int x=0;
-
-	while(x < numberOfClusters)
+	for(int index=0;index<randomPositions.size();++index)
 	{
-		vector<double> temp;
-
-		for(int index=x;index<dataHolder.size();index+=numberOfClusters)
+		for(int count=0;count<T.dataVector.size();++count)
 		{
-			cout << "Adding " << dataHolder[index] << " to cluster " << x << endl;
+			if(randomPositions.at(index)==count)
+			{
+				T.clusters.push_back(T.dataVector.at(count));
 
-			cout << endl;
+				T.dataVector.erase(begin(T.dataVector)+count);
 
-			temp.push_back(dataHolder.at(index));
+				for(int i=0;i<randomPositions.size();++i)
+				{
+					if(randomPositions.at(index) < randomPositions.at(i) && index != i)
+					{
+						randomPositions.at(i)-=1;	
+					}	
+				}
+			}
 		}
 
-		T.clusters.push_back(temp);
 
-		x++;
 	}
+
+	printClusters(T);
+}
+
+float calculateDistance(vector<float> & N, vector<float> & K)
+{
+	/*
+	cout << "Hello, from calculateDistance" << endl;
+
+	cout << endl;
+	*/
+
+	float sum {};
+
+	for(int location=0;location<N.size();++location)
+	{
+		sum+=pow((K.at(location)-N.at(location)), 2);
+	}
+
+	sum=sqrt(sum);
+
+	/*
+	cout << "Going to return the sum of: " << sum << endl;
+
+	cout << endl;
+	*/	
+
+	return sum;
 }
 
 void* kMeans(void *parameters)
 {
 	ThreadData *threadData=(ThreadData*)parameters;
 
-	calculateClusterMeans(threadData->clusters, threadData->clusterMeans);
+	vector<vector<float>> buckets;
 
-	for(int index=0;index<1;++index)
+	buckets.resize(numberOfClusters);
+
+	float minimum=INT_MAX;
+
+	float result;
+
+	int spot=0;
+
+	vector<float> elements;
+
+	for(int n=0;n<numberOfDataPoints-numberOfClusters;++n)
 	{
-		int yCoordinate=0;
+		for(int k=0;k<numberOfClusters;++k)
+		{	
+			result=calculateDistance(threadData->dataVector.at(n), threadData->clusters.at(k));
 
-		while(yCoordinate < numberOfDataPoints)
-		{
-			int xCoordinate=0;
-
-			vector<double> samplePoint;
-
-			samplePoint.reserve(numberOfColumns);
-
-			while(xCoordinate < numberOfColumns)
+			if(minimum > result)
 			{
-				cout << "Looking at the point: " << "(" << threadData->dataVector[xCoordinate][yCoordinate] << ", " << threadData->dataVector[xCoordinate][yCoordinate] << ")" << endl;
+				minimum=result;
 
-				cout << endl;
-
-				double sample=threadData->dataVector[xCoordinate][yCoordinate];
-
-				samplePoint.push_back(sample);
-
-				xCoordinate++;
+				spot=k;
+				
+				elements=threadData->dataVector.at(n);
 			}
-
-			/*calculate all the parts used by the distance function*/
-			for(int position=0;position<samplePoint.size();++position)
-			{
-				for(int spot=0;spot<threadData->clusterMeans.size();++spot)
-				{
-					vector<double> euclideanDistances;
-
-					vector<double> distanceFunctionParts;
-
-					double part;
-
-					if(position==spot)
-					{
-						//first part of the distance function calculation
-						part=pow((samplePoint.at(position)+threadData->clusterMeans.at(spot)), 2);
-					}
-					else
-					{
-						//the rest of the distance function calculation
-						part=pow((samplePoint.at(position)+0.0), 2);
-					}
-
-					distanceFunctionParts.push_back(part);
-
-					int sum {};
-
-					/*take the square root of the sum of the parts of the distance formula*/
-					for(int index=0;index<distanceFunctionParts;++index)
-					{
-						sum+=distanceFunctionParts.at(index);
-					}
-
-					/*take the square root of the sum*/
-					double euclideanDistance=(double)sqrt(sum);
-
-					euclideanDistances.push_back(euclideanDistance);
-
-					/*clear the vector so we can use it for the next pair of coordinates*/
-					distanceFunctionParts.clear();
-
-					auto smallestEuclideanDistance=min_element(eucildeanDistances.begin(), euclideanDistance.end())
-
-					int positionOfCluster;
-
-
-					/*becuase we used push_back to insert into the euclideanDistance vector
-					the order of the distances will match the order of the clusters in our vector holding the clusters
-					so, the position of the smallest euclidean distance will correspond to the position of the cluster
-					we want to add our coordinate to*
-					*/
-					for(int position=0;position<euclideanDistances.size();++position)
-					{
-						if(euclideanDistances.at(position)==*(smallestEuclideanDistance))
-						{
-							positionOfCluster=position;
-						}
-					}
-
-					addCoordinateToCluster(threadData->clusters, positionOfCluster, samplePoint);
-
-					samplePoint.clear();
-
-					calculateClusterMeans(threadData->clusterMeans);
-				}
-			}
-
-			yCoordinate++;
 		}
+
+		for(int b=0;b<numberOfColumns;++b)
+		{
+			buckets.at(spot).push_back(elements.at(b));
+		}	
+
+		minimum=INT_MAX;
 	}
+
+	cout << "Bucket vector after:" << endl;
+
+	for(const auto & bucket : buckets)
+	{
+		for(const auto & element : bucket)
+		{
+			cout << element << " ";
+		}
+
+		cout << endl;
+	}
+	calculateClusterMeans(buckets, *threadData);
 	
 	return NULL;
 }
@@ -271,7 +316,7 @@ void readInData(ifstream & File, ThreadData & T)
 
 	int counter=0;
 
-	vector<double> dataHolder;
+	vector<float> dataHolder;
 
 	while(getline(File, line))
 	{
@@ -281,9 +326,9 @@ void readInData(ifstream & File, ThreadData & T)
 		cout << endl;
 		*/
 
-		double input1;
+		float input1;
 
-		double input2;
+		float input2;
 
 		stringstream ss(line);
 
@@ -328,26 +373,22 @@ void readInData(ifstream & File, ThreadData & T)
 		counter++;
 	}
 
-	int i=0;
-
-	while(i < numberOfColumns)
+	for(int index=0;index<dataHolder.size();index+=numberOfColumns)
 	{
-		vector<double> temp;
+		vector<float> temp;
 
-		for(int index=0;index<dataHolder.size();index+=numberOfColumns)
+		for(int position=index;position<(numberOfColumns+index);++position)
 		{
-			/*
-			cout << "Adding " << dataHolder.at(index) << " to the vector" << endl;
-
-			cout << endl;
-			*/
-
 			temp.push_back(dataHolder.at(index));
 		}
 
-		T.dataVector.push_back(temp);
+		/*
+		cout << "Adding " << dataHolder.at(index) << " to the vector" << endl;
 
-		i++;
+		cout << endl;
+		*/
+
+		T.dataVector.push_back(temp);
 	}
 }
 
@@ -371,6 +412,8 @@ int main(int argc, char *argv[])
 	ThreadData threadData;
 
 	readInData(infile, threadData);
+
+	printDataVector(threadData);
 
 	createClusters(threadData);
 
