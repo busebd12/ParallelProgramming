@@ -12,6 +12,7 @@
 #include <cmath>
 #include <pthread.h>
 #include <climits>
+#include "etime.h"
 using namespace std;
 
 int numberOfColumns;
@@ -21,6 +22,12 @@ int numberOfDataPoints;
 int numberOfClusters;
 
 int numberOfProcessors;
+
+pthread_mutex_t kmeansMutex;
+
+pthread_cond_t kmeansConditionVariable;
+
+
 
 struct ThreadData
 {
@@ -33,9 +40,11 @@ struct ThreadData
 	int sizeOfDataVector;
 };
 
-void printDataVector(const ThreadData & T)
+ThreadData threadData;
+
+void printDataVector()
 {
-	for(const auto & vec : T.dataVector)
+	for(const auto & vec : threadData.dataVector)
 	{
 		for(const auto & element : vec)
 		{
@@ -46,11 +55,11 @@ void printDataVector(const ThreadData & T)
 	}
 }
 
-void printClusters(const ThreadData & T)
+void printClusters()
 {
 	cout << "Clusters:" << endl;
 
-	for(const auto & cluster : T.clusters)
+	for(const auto & cluster : threadData.clusters)
 	{
 		for(const auto & sample : cluster)
 		{
@@ -63,23 +72,7 @@ void printClusters(const ThreadData & T)
 	cout << endl;
 }
 
-void addCoordinateToCluster(ThreadData & T, int PositionOfCluster, vector<float> & SamplePoint)
-{
-	T.clusters.at(PositionOfCluster).insert(begin(T.clusters.at(PositionOfCluster)), SamplePoint.begin(), SamplePoint.end());
-}
-
-float calculateClusterMeanHelper(vector<float> & Cluster)
-{
-	int size=Cluster.size();
-
-	float sum=accumulate(Cluster.begin(), Cluster.end(), 0.0);
-
-	float mean=(float)(sum/size);
-
-	return mean;
-}
-
-void calculateClusterMeans(vector<vector<float>> Buckets, ThreadData & T)
+void calculateClusterMeans(vector<vector<float>> Buckets)
 {
 	vector<vector<float>> finalResult;
 
@@ -100,7 +93,7 @@ void calculateClusterMeans(vector<vector<float>> Buckets, ThreadData & T)
 		}
 	}
 
-	printClusters(T);
+	printClusters();
 
 	for(int a=0;a<finalResult.size();++a)
 	{
@@ -108,7 +101,7 @@ void calculateClusterMeans(vector<vector<float>> Buckets, ThreadData & T)
 		{
 			finalResult.at(a).at(b)= finalResult.at(a).at(b) / (Buckets.at(a).size()/numberOfColumns);
 
-			T.clusters.at(a)=finalResult.at(a);
+			threadData.clusters.at(a)=finalResult.at(a);
 		}
 	}
 
@@ -125,12 +118,7 @@ void calculateClusterMeans(vector<vector<float>> Buckets, ThreadData & T)
 	}
 }
 
-void addSampleToCluster(vector<float> & Cluster, float Sample)
-{
-	Cluster.push_back(Sample);
-}
-
-void createClusters(ThreadData & T)
+void createClusters()
 {
 	cout << "In create clusters function" << endl;
 
@@ -165,13 +153,13 @@ void createClusters(ThreadData & T)
 
 	for(int index=0;index<randomPositions.size();++index)
 	{
-		for(int count=0;count<T.dataVector.size();++count)
+		for(int count=0;count<threadData.dataVector.size();++count)
 		{
 			if(randomPositions.at(index)==count)
 			{
-				T.clusters.push_back(T.dataVector.at(count));
+				threadData.clusters.push_back(threadData.dataVector.at(count));
 
-				T.dataVector.erase(begin(T.dataVector)+count);
+				threadData.dataVector.erase(begin(threadData.dataVector)+count);
 
 				for(int i=0;i<randomPositions.size();++i)
 				{
@@ -182,21 +170,13 @@ void createClusters(ThreadData & T)
 				}
 			}
 		}
-
-
 	}
 
-	printClusters(T);
+	printClusters();
 }
 
 float calculateDistance(vector<float> & N, vector<float> & K)
 {
-	/*
-	cout << "Hello, from calculateDistance" << endl;
-
-	cout << endl;
-	*/
-
 	float sum {};
 
 	for(int location=0;location<N.size();++location)
@@ -206,18 +186,23 @@ float calculateDistance(vector<float> & N, vector<float> & K)
 
 	sum=sqrt(sum);
 
-	/*
-	cout << "Going to return the sum of: " << sum << endl;
-
-	cout << endl;
-	*/	
-
 	return sum;
 }
 
 void* kMeans(void *parameters)
 {
-	ThreadData *threadData=(ThreadData*)parameters;
+	long threadRank=(long)parameters;
+
+	int chunkSize=(numberOfProcessors-numberOfColumns)/numberOfProcessors;
+
+	int myStart=threadRank*chunkSize+1;
+
+	int myEnd=threadRank*chunkSize+chunkSize;
+
+	if(threadRank==numberOfProcessors-1)
+	{
+		myEnd=numberOfDataPoints-numberOfColumns;
+	}
 
 	vector<vector<float>> buckets;
 
@@ -231,11 +216,13 @@ void* kMeans(void *parameters)
 
 	vector<float> elements;
 
-	for(int n=0;n<numberOfDataPoints-numberOfClusters;++n)
+	for(int n=myStart;n<=myEnd;++n)
 	{
-		for(int k=0;k<numberOfClusters;++k)
+		pthread_mutex_lock(&kmeansMutex);
+
+		for(int k=n+1;k<n;++k)
 		{	
-			result=calculateDistance(threadData->dataVector.at(n), threadData->clusters.at(k));
+			result=calculateDistance(threadData.dataVector.at(n), threadData.clusters.at(k));
 
 			if(minimum > result)
 			{
@@ -243,7 +230,7 @@ void* kMeans(void *parameters)
 
 				spot=k;
 				
-				elements=threadData->dataVector.at(n);
+				elements=threadData.dataVector.at(n);
 			}
 		}
 
@@ -253,6 +240,8 @@ void* kMeans(void *parameters)
 		}	
 
 		minimum=INT_MAX;
+
+		pthread_mutex_unlock(&kmeansMutex);
 	}
 
 	cout << "Bucket vector after:" << endl;
@@ -266,12 +255,13 @@ void* kMeans(void *parameters)
 
 		cout << endl;
 	}
-	calculateClusterMeans(buckets, *threadData);
+
+	calculateClusterMeans(buckets);
 	
 	return NULL;
 }
 
-void readInData(ifstream & File, ThreadData & T)
+void readInData(ifstream & File)
 {
 	if(!(File.is_open()))
 	{
@@ -300,7 +290,7 @@ void readInData(ifstream & File, ThreadData & T)
 		count++;
 	}
 
-	T.sizeOfDataVector=(numberOfDataPoints*numberOfColumns);
+	threadData.sizeOfDataVector=(numberOfDataPoints*numberOfColumns);
 
 	cout << "The number of data points is " << numberOfDataPoints << endl;
 
@@ -388,7 +378,7 @@ void readInData(ifstream & File, ThreadData & T)
 		cout << endl;
 		*/
 
-		T.dataVector.push_back(temp);
+		threadData.dataVector.push_back(temp);
 	}
 }
 
@@ -396,32 +386,47 @@ int main(int argc, char *argv[])
 {
 	if(argc!=4)
 	{
-		cerr << "Incorrect number of command line arguments. The program will exit gracefully now..." << endl;
+		cerr << "Incorrect number of command line arguments. The program will exit gracefully, now..." << endl;
 
 		exit(0);
 	}
 
+	pthread_t* threadHandles;
+
 	numberOfClusters=atoi(argv[1]);
 
-	numberOfProcessors=atoi(argv[2]);
+	numberOfProcessors=strtol(argv[2],NULL,10);
 
 	ifstream infile;
 
 	infile.open(argv[3]);
 
-	ThreadData threadData;
+	readInData(infile);
 
-	readInData(infile, threadData);
+	printDataVector();
 
-	printDataVector(threadData);
+	createClusters();
 
-	createClusters(threadData);
+	printClusters();
 
-	printClusters(threadData);
+	/*Initialize mutex and condition variable objects*/
+	pthread_mutex_init(&kmeansMutex, NULL);
 
-	pthread_t someThread;
+	long thread;
 
-	pthread_create(&someThread, NULL, kMeans, (void*)&threadData);
+	threadHandles = malloc(numberOfProcessors * sizeof(pthread_t));
 
-	pthread_join(someThread, NULL);
+	for(thread=0;thread<numberOfProcessors;++thread)
+	{
+		pthread_create(&threadHandles[thread], NULL, kMeans, (void*)thread);
+	}
+
+	for(thread=0;thread<numberOfProcessors;++thread)
+	{
+		pthread_join(threadHandles[thread], NULL);
+	}
+
+	pthread_mutex_destroy(&kmeansMutex);
+	free(threadHandles);
+
 }
