@@ -19,22 +19,10 @@ void searchForInstances(const vector<string> & Motifs, const vector<string> & Se
 		{
 			int matchCount=0;
 
-			/*
-			cout << "About to compare motif: " << Motifs[position] << " and sequence: " << sequence << endl;
-
-			cout << endl;
-			*/
-
 			for(int spot=0;spot<sequence.size();++spot)
 			{
 				if(sequence[spot]==Motifs[position][spot] || (Motifs[position][spot]=='X' && sequence[spot]!='X'))
 				{
-					/*
-					cout << "Motif character: " << Motifs[position][spot] << " matches with sequence character: " << sequence[spot] << endl;
-
-					cout << endl;
-					*/
-
 					matchCount++;
 				}
 			}
@@ -66,7 +54,6 @@ void searchForInstances(const vector<string> & Motifs, const vector<string> & Se
 	}
 
 	cout << endl;
-	
 }
 
 int main(int argc, char* argv [])
