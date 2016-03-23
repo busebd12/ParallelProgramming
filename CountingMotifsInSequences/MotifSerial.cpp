@@ -5,7 +5,7 @@
 #include <map>
 using namespace std;
 
-void searchForInstances(const vector<string> & Motifs, const vector<string> & Sequences, int MotifLength)
+void searchForInstances(const vector<string> & Motifs, const vector<string> & Sequences, int MotifLength, ofstream & OutputFile)
 {
 	int index=0;
 
@@ -15,25 +15,38 @@ void searchForInstances(const vector<string> & Motifs, const vector<string> & Se
 	{
 		string sequence=Sequences[index];
 
-		int matchCount=0;
-
 		for(int position=0;position<Motifs.size();++position)
 		{
-			for(int spot=0;spot<Motifs[position].size();++spot)
+			int matchCount=0;
+
+			/*
+			cout << "About to compare motif: " << Motifs[position] << " and sequence: " << sequence << endl;
+
+			cout << endl;
+			*/
+
+			for(int spot=0;spot<sequence.size();++spot)
 			{
 				if(sequence[spot]==Motifs[position][spot] || (Motifs[position][spot]=='X' && sequence[spot]!='X'))
 				{
-					//cout << "Motif character: " << Motifs[position][spot] << endl;
+					/*
+					cout << "Motif character: " << Motifs[position][spot] << " matches with sequence character: " << sequence[spot] << endl;
 
-					//cout << "Sequence character: " << sequence[spot] << endl;
+					cout << endl;
+					*/
 
 					matchCount++;
 				}
 			}
 
-			if(matchCount==Motifs[position].size())
+			if(matchCount==sequence.size())
 			{
 				motifMap[Motifs.at(position)]++;
+			}
+
+			if(matchCount!=sequence.size())
+			{
+				motifMap.insert({Motifs.at(position), 0});
 			}
 		}
 
@@ -41,12 +54,19 @@ void searchForInstances(const vector<string> & Motifs, const vector<string> & Se
 	}
 	while(index!=Sequences.size());
 
+	cout << motifMap.size() << endl;
+
+	OutputFile << motifMap.size() << endl;
+
 	for(const auto & element : motifMap)
 	{
-		cout << "Motif: " << element.first << " count: " << element.second << endl;
+		cout << element.first << "," << element.second << endl;
+
+		OutputFile << element.first + ", " + to_string(element.second) << endl;
 	}
 
 	cout << endl;
+	
 }
 
 int main(int argc, char* argv [])
@@ -55,26 +75,43 @@ int main(int argc, char* argv [])
 
 	ifstream sequencesFile;
 
+	ofstream outputFile;
+
 	vector<string> motifs;
 
 	vector<string> sequences;
+
+	if(argc!=4)
+	{
+		cout << "Wrong amount of command line arguments. Should be <executable>  <motifFile>  <sequencesFile>  <outputFile>" << endl;
+
+		cout << endl;
+
+		cout << "The program will gracefully terminate, now" << endl;
+
+		cout << endl;
+
+		exit(0);
+	}
 
 	motifFile.open(argv[1]);
 
 	sequencesFile.open(argv[2]);
 
+	outputFile.open(argv[3]);
+
 	int motifLength;
 
 	int sequencesLength;
 
-	//check to see if we can open either of the files. if not, exit the program gracefully.
-	if(!motifFile.is_open() || !sequencesFile.is_open())
+	//check to see if we can open either of the files. if not, exit the program, gracefully
+	if(!motifFile.is_open() || !sequencesFile.is_open() || !outputFile.is_open())
 	{
-		cout << "Couldn't find either the motif file or the sequences file" << endl;
+		cout << "Couldn't find either the motif file, the sequences file, or the output file, go fuck yourself" << endl;
 
 		cout << endl;
 
-		cout << "The program will gracefully terminate" << endl;
+		cout << "The program will gracefully terminate now" << endl;
 
 		exit(0);
 	}
@@ -83,22 +120,13 @@ int main(int argc, char* argv [])
 
 	string sequencesLine;
 
-	cout << "Reading from the motif file:" << endl;
-
 	int motifCounter=0;
 
+	//read stuff from the motif file
 	while(getline(motifFile, motifLine))
 	{
-		cout << "Line from motif file: " << motifLine << endl;
-
-		cout << endl;
-
 		if(motifCounter==0)
 		{
-			//cout << "Motif length: " << motifLine[2]-'0' << endl;
-
-			//cout << endl;
-
 			motifLength=motifLine[2]-'0';
 		}
 
@@ -110,22 +138,13 @@ int main(int argc, char* argv [])
 		motifCounter++;
 	}
 
-	cout << "Reading from the sequences file:" << endl;
-
 	int sequencesCounter=0;
 
+	//read stuff from the sequences file
 	while(getline(sequencesFile, sequencesLine))
 	{
-		cout << "Line from sequences file: " << sequencesLine << endl;
-
-		cout << endl;
-
 		if(sequencesCounter==0)
 		{
-			//cout << "Sequnce length: " << sequencesLine[2]-'0' << endl;
-
-			//cout << endl;
-
 			sequencesLength=sequencesLine[2]-'0';
 		}
 
@@ -137,6 +156,7 @@ int main(int argc, char* argv [])
 		sequencesCounter++;
 	}
 
+	//check to see if the lengths match. If not, exit gracefully
 	if(motifLength!=sequencesLength)
 	{
 		cout << "The motif and sequence lengths don't match" << endl;
@@ -148,5 +168,11 @@ int main(int argc, char* argv [])
 		exit(0);
 	}
 
-	searchForInstances(motifs, sequences, motifLength);
+	searchForInstances(motifs, sequences, motifLength, outputFile);
+
+	motifFile.close();
+
+	sequencesFile.close();
+
+	outputFile.close();
 }
