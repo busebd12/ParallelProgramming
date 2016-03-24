@@ -117,8 +117,6 @@ int main(int argc, char* argv [])
 	//read stuff from the motif file
 	while(getline(motifFile, motifLine))
 	{
-		cout << motifLine << endl;
-
 		if(motifCounter==0)
 		{
 			string space {" "};
@@ -132,7 +130,7 @@ int main(int argc, char* argv [])
 			//convert string verison of size to integer
 			motifLength=stoi(substringWithSize);
 
-			cout << "Moftif length: " << motifLength << endl;
+			//cout << "Moftif length: " << motifLength << endl;
 		}
 
 		if(motifCounter!=0)
@@ -161,7 +159,7 @@ int main(int argc, char* argv [])
 			//convert string verison of size to integer
 			sequencesLength=stoi(substringWithSize);
 
-			cout << "Sequence length: " << sequencesLength << endl;
+			//cout << "Sequence length: " << sequencesLength << endl;
 		}
 
 		if(sequencesCounter!=0)
@@ -184,7 +182,7 @@ int main(int argc, char* argv [])
 		exit(0);
 	}
 
-	//searchForInstances(motifs, sequences, motifLength, outputFile);
+	searchForInstances(motifs, sequences, motifLength, outputFile);
 
 	motifFile.close();
 
