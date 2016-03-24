@@ -123,10 +123,13 @@ int main(int argc, char* argv [])
 		{
 			string space {" "};
 
+			//find the space since the size of the motif will always follow the space character
 			auto foundSpace=motifLine.find(space);
 
+			//form a substring of everything after the space (i.e. the size of the motif)
 			string substringWithSize=motifLine.substr(++foundSpace);
 
+			//convert string verison of size to integer
 			motifLength=stoi(substringWithSize);
 
 			cout << "Moftif length: " << motifLength << endl;
@@ -149,10 +152,13 @@ int main(int argc, char* argv [])
 		{
 			string space {" "};
 
+			//find the space since the size of the sequence will always follow the space character
 			auto foundSpace=sequencesLine.find(space);
 
+			//form a substring of everything after the space (i.e. the size of the sequence)
 			string substringWithSize=sequencesLine.substr(++foundSpace);
 
+			//convert string verison of size to integer
 			sequencesLength=stoi(substringWithSize);
 
 			cout << "Sequence length: " << sequencesLength << endl;
