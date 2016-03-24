@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <string>
 using namespace std;
 
 void searchForInstances(const vector<string> & Motifs, const vector<string> & Sequences, int MotifLength, ofstream & OutputFile)
@@ -21,17 +22,21 @@ void searchForInstances(const vector<string> & Motifs, const vector<string> & Se
 
 			for(int spot=0;spot<sequence.size();++spot)
 			{
+				//compare the characters
 				if(sequence[spot]==Motifs[position][spot] || (Motifs[position][spot]=='X' && sequence[spot]!='X'))
 				{
+					//characters match, so increment the number of matches
 					matchCount++;
 				}
 			}
 
+			//Add the motif if matches the sequence
 			if(matchCount==sequence.size())
 			{
 				motifMap[Motifs.at(position)]++;
 			}
 
+			//add the motif even if it doesn't match the sequence, just be be consistent with the example output
 			if(matchCount!=sequence.size())
 			{
 				motifMap.insert({Motifs.at(position), 0});
@@ -112,9 +117,19 @@ int main(int argc, char* argv [])
 	//read stuff from the motif file
 	while(getline(motifFile, motifLine))
 	{
+		cout << motifLine << endl;
+
 		if(motifCounter==0)
 		{
-			motifLength=motifLine[2]-'0';
+			string space {" "};
+
+			auto foundSpace=motifLine.find(space);
+
+			string substringWithSize=motifLine.substr(++foundSpace);
+
+			motifLength=stoi(substringWithSize);
+
+			cout << "Moftif length: " << motifLength << endl;
 		}
 
 		if(motifCounter!=0)
@@ -132,7 +147,15 @@ int main(int argc, char* argv [])
 	{
 		if(sequencesCounter==0)
 		{
-			sequencesLength=sequencesLine[2]-'0';
+			string space {" "};
+
+			auto foundSpace=sequencesLine.find(space);
+
+			string substringWithSize=sequencesLine.substr(++foundSpace);
+
+			sequencesLength=stoi(substringWithSize);
+
+			cout << "Sequence length: " << sequencesLength << endl;
 		}
 
 		if(sequencesCounter!=0)
@@ -155,7 +178,7 @@ int main(int argc, char* argv [])
 		exit(0);
 	}
 
-	searchForInstances(motifs, sequences, motifLength, outputFile);
+	//searchForInstances(motifs, sequences, motifLength, outputFile);
 
 	motifFile.close();
 
