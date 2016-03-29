@@ -132,7 +132,7 @@ int main(int argc, char* argv [])
 
 		cout << endl;
 
-		cout << "Processor " << myRank << " received the motifs:" << endl;
+		cout << "Processor " << myRank << " received the following motifs (as one big string):" << endl;
 
 		for(int count=0;count<arraySize;++count)
 		{
