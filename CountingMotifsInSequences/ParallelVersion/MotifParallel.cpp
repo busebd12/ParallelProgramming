@@ -25,16 +25,8 @@ int main(int argc, char* argv [])
 
 	ofstream outputFile;
 
-	char *motifsArray;
-
-	int arraySize;
-
-	string motifs {};
-
-	vector<string> sequences;
-
 	//if(argc!=4)
-	if(argc!=2)
+	if(argc!=3)
 	{
 		cout << "Wrong amount of command line arguments. Should be <executable>  <motifFile>  <sequencesFile>  <outputFile>" << endl;
 
@@ -49,13 +41,33 @@ int main(int argc, char* argv [])
 
 	string motifLine;
 
+	string sequencesLine;
+
 	int motifLength;
 
+	int sequencesLength;
+
 	int numberOfMotifs;
+
+	int numberOfSequences;
+
+	char *motifsArray;
+
+	char* sequencesArray;
+
+	int motifArraySize;
+
+	int sequencesArraySize;
+
+	string motifs {};
+
+	string sequences {};
 
 	if(myRank==0)
 	{
 		motifFile.open(argv[1]);
+
+		sequencesFile.open(argv[2]);
 
 		int motifCounter=0;
 
@@ -96,59 +108,152 @@ int main(int argc, char* argv [])
 			motifCounter++;
 		}
 
-		arraySize=numberOfMotifs*motifLength;
+		int sequencesCounter=0;
 
-		motifsArray=new char[arraySize];
+		//read stuff from the sequences file
+		while(getline(sequencesFile, sequencesLine))
+		{
+			if(sequencesCounter==0)
+			{
+				string space {" "};
+
+				//find the space since the size of the sequence will always follow the space character
+				auto foundSpace=sequencesLine.find(space);
+
+				//form a substring of everything after the space (i.e. the size of the sequence)
+				string substringWithSize=sequencesLine.substr(++foundSpace);
+
+				string sequencesNumber=sequencesLine.substr(0, foundSpace);
+
+				//convert string verison of size to integer
+				sequencesLength=stoi(substringWithSize);
+
+				numberOfSequences=stoi(sequencesNumber);
+
+				cout << "Sequence length: " << sequencesLength << endl;
+
+				cout << endl;
+
+				cout << "Number of sequences: " << numberOfSequences << endl;
+
+				cout << endl;
+			}
+
+			if(sequencesCounter!=0)
+			{
+				sequences+=sequencesLine;
+			}
+
+			sequencesCounter++;
+		}
+
+		motifArraySize=numberOfMotifs*motifLength;
+
+		sequencesArraySize=numberOfSequences*sequencesLength;
+
+		motifsArray=new char[motifArraySize];
+
+		sequencesArray=new char[sequencesArraySize];
 
 		for(int index=0;index<motifs.size();++index)
 		{
 			motifsArray[index]=motifs[index];
 		}
 
+		for(int spot=0;spot<sequences.size();++spot)
+		{
+			sequencesArray[spot]=sequences[spot];
+		}
+
 		cout << "Processor " << myRank << " is going to send the following " << motifs << " motifs to other processors:" << endl;
 
 		cout << endl;
 
-		//send arraySize, the number of motifs, and the length of a motif to other processors so they can use it
-		MPI_Send(&arraySize, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+		cout << "Processor " << myRank << " is going to send the following " << sequences << " sequences to the other processors" << endl;
+
+		cout << endl;
+
+		//send motifArraySize, the number of motifs, and the length of a motif to other processors so they can use it
+		MPI_Send(&motifArraySize, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 
 		MPI_Send(&numberOfMotifs, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 
 		MPI_Send(&motifLength, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 
-		//send the motif array. need arraySize+1 to account for the \0 character.
-		MPI_Send(motifsArray, arraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
+		//send the motif array
+		MPI_Send(motifsArray, motifArraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
+
+		//send sequencesArraySize, number of sequences, and length of a sequence to other processors so they can use it
+		MPI_Send(&sequencesArraySize, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+
+		MPI_Send(&numberOfSequences, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+
+		MPI_Send(&sequencesLength, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+
+		//send the sequences array
+		MPI_Send(sequencesArray, sequencesArraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
 
 		delete [] motifsArray;
+
+		delete [] sequencesArray;
 
 	}
 	else if(myRank==1)
 	{
-		MPI_Recv(&arraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(&motifArraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		
 		MPI_Recv(&numberOfMotifs, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 		MPI_Recv(&motifLength, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		char motifsArray[arraySize];
+		char motifsArray[motifArraySize];
 
-		MPI_Recv(motifsArray, arraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(motifsArray, motifArraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		cout << "Processor " << myRank << " received array of size: " << arraySize << endl;
+
+		MPI_Recv(&sequencesArraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		
+		MPI_Recv(&numberOfSequences, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		MPI_Recv(&sequencesLength, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		char sequencesArray[sequencesArraySize];
+
+		MPI_Recv(sequencesArray, sequencesArraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		
+
+		cout << "Processor " << myRank << " received motif array of size: " << motifArraySize << endl;
 
 		cout << endl;
 
 		cout << "Processor " << myRank << " received the following motifs (as one big string):" << endl;
 
-		for(int count=0;count<arraySize;++count)
+		for(int count=0;count<motifArraySize;++count)
 		{
 			cout << motifsArray[count] << " ";
+		}
+
+		cout << endl;
+
+		cout << endl;
+
+		cout << "Processor " << myRank << " received the sequences array of size: " << sequencesArraySize << endl;
+
+		cout << endl;
+
+		cout << "Processor " << myRank << " received the following sequences (as one big string):" << endl;
+
+		for(int fucks=0;fucks<sequencesArraySize;++fucks)
+		{
+			cout << sequencesArray[fucks];
 		}
 
 		cout << endl;
 	}
 
 	motifFile.close();
+
+	sequencesFile.close();
 
 	MPI_Finalize();
 }	
