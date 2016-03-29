@@ -81,7 +81,11 @@ int main(int argc, char* argv [])
 
 				cout << "Number of motifs: " << numberOfMotifs << endl;
 
+				cout << endl;
+
 				cout << "Moftif length: " << motifLength << endl;
+
+				cout << endl;
 			}
 			else
 			{
@@ -115,6 +119,8 @@ int main(int argc, char* argv [])
 		//send the motif array. need arraySize+1 to account for the \0 character.
 		MPI_Send(motifsArray, arraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
 
+		delete [] motifsArray;
+
 	}
 	else if(myRank==1)
 	{
@@ -142,7 +148,7 @@ int main(int argc, char* argv [])
 		cout << endl;
 	}
 
-	delete [] motifsArray;
+	motifFile.close();
 
 	MPI_Finalize();
 }	
