@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
-#include <mpi.h>
 #include <fstream>
+#include <map>
+#include <mpi.h>
 using namespace std;
 
 int main(int argc, char* argv [])
@@ -148,9 +149,9 @@ int main(int argc, char* argv [])
 		}
 
 		//need the extra 1 for the \0 character
-		motifArraySize=(numberOfMotifs*motifLength)+1;
+		motifArraySize=(numberOfMotifs*motifLength);
 
-		sequencesArraySize=(numberOfSequences*sequencesLength)+1;
+		sequencesArraySize=(numberOfSequences*sequencesLength);
 
 		motifsArray=new char[motifArraySize];
 
@@ -191,9 +192,61 @@ int main(int argc, char* argv [])
 
 		MPI_Send(&sequencesLength, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 
-		//send the sequences array
 		MPI_Send(sequencesArray, sequencesArraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
 
+		int finalMotifsArraySize;
+
+		char finalMotifsArray[finalMotifsArraySize];
+
+		//receive the shit from the slave processors
+		MPI_Recv(&finalMotifsArraySize, 1, MPI_INT, 1, 1,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		cout << "The master processor received an array of size " << finalMotifsArraySize << " from the slave processor(s)" << endl;
+
+		cout << endl;
+		
+		MPI_Recv(finalMotifsArray, finalMotifsArraySize, MPI_CHAR, 1, 1,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		cout << "The master processor received the following from the slave processor(s): " << endl;
+
+		//int counter=1;
+			
+		for(int i=0;i<finalMotifsArraySize;++i)
+		{
+			cout << finalMotifsArray[i];
+
+
+			if(i%(motifLength+1)==0)
+			{
+				cout << endl;
+			}
+			
+
+			//counter++;
+		}
+
+		cout << endl;
+
+		cout << endl;
+		
+		/*
+		int present=0;
+
+		int future=motifLength+1;
+
+		while(future < finalMotifsArraySize+(motifLength+1))
+		{
+			string motif(&finalMotifsArray[present], &finalMotifsArray[future]);
+
+			cout << motif << endl;
+
+			present+=motifLength+1;
+
+			future+=motifLength+1;
+		}
+		*/
+
+		//free the electrons		
 		delete [] motifsArray;
 
 		delete [] sequencesArray;
@@ -201,6 +254,10 @@ int main(int argc, char* argv [])
 	}
 	else if(myRank==1)
 	{
+		//cout << "Meanwhile, over on the worker processor" << endl;
+
+		map<string, int> motifMap;
+
 		MPI_Recv(&motifArraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		
 		MPI_Recv(&numberOfMotifs, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -247,13 +304,13 @@ int main(int argc, char* argv [])
 
 			int count=1;
 
-			cout << "Using motif: " << currentMotif << endl;
+			//cout << "Using motif: " << currentMotif << endl;
 
 			while(place < sequencesArraySize)
 			{
-				cout << sequencesArray[place] << " and " << motifsArray[place] << " ";
+				//cout << sequencesArray[place] << " and " << motifsArray[place] << " ";
 
-				cout << endl;
+				//cout << endl;
 
 				//matching character
 				if((repeatMotif[place]==sequencesArray[place]) || (sequencesArray[place]!='X' && repeatMotif[place]=='X'))
@@ -267,9 +324,15 @@ int main(int argc, char* argv [])
 					//all the characters in the sequence match
 					if(matchCount==sequencesLength)
 					{
-						cout << "Adding the motif: " << currentMotif << endl;
+						//cout << "Adding the motif: " << currentMotif << endl;
+						
+						//matchingMotifs+=currentMotif;
+						motifMap[currentMotif]++;
+					}
 
-						matchingMotifs+=currentMotif;
+					if(matchCount!=sequencesLength)
+					{
+						motifMap.insert({currentMotif, 0});
 					}
 
 					//need to reset since we will be starting to look at a new sequence
@@ -281,31 +344,64 @@ int main(int argc, char* argv [])
 				count++;
 			}
 
-			cout << endl;
+			//cout << endl;
 
-			cout << endl;
+			//cout << endl;
 
 			next+=motifLength;
 
 			current+=motifLength;
 		}
 
-		cout << "The matching motifs were: " << endl;
+		/*
+		cout << endl;
 
-		int present=0;
+		cout << motifMap.size() << endl;
 
-		int future=motifLength;
-
-		while(future < matchingMotifs.size()+motifLength)
+		for(const auto & motif : motifMap)
 		{
-			string motif(&matchingMotifs[present], &matchingMotifs[future]);
-
-			cout << motif << endl;
-
-			present+=motifLength;
-
-			future+=motifLength;
+			cout << motif.first << ", " << motif.second << endl;
 		}
+		*/
+
+		string finalMotifs {};
+
+		//loop through the map and combine all the motifs and the number of times they appear into one string
+		for(const auto & motif : motifMap)
+		{
+			finalMotifs+=(motif.first + to_string(motif.second));
+		}
+
+		//cout << endl;
+
+		//cout << "The final motif to be sent back to the master processor: " << finalMotifs << endl;
+
+		//cout << endl;
+
+		int finalMotifsArraySize=finalMotifs.size();
+
+		//cout << "finalMotifsArraySize on the slave(s) processor: " << finalMotifsArraySize << endl;
+
+		char finalMotifsArray[finalMotifsArraySize];
+
+		//copy that one giant string we created eariler into a character array
+		//so that we can actually send it back to the master processor
+		for(int index=0;index<finalMotifs.size();++index)
+		{
+			finalMotifsArray[index]=finalMotifs[index];
+		}
+
+		//cout << "Before sending from slave processor" << endl;
+
+		//send the size of the final motifs array to the master processor
+		MPI_Send(&finalMotifsArraySize, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+
+		//send the final motifs back to the master processor
+		MPI_Send(finalMotifsArray, finalMotifsArraySize, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
+
+		//cout << "Sending from the slave processor to the master processor..." << endl;
+
+		//cout << endl;
 	}
 
 	motifFile.close();
