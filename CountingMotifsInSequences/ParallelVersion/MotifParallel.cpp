@@ -147,9 +147,10 @@ int main(int argc, char* argv [])
 			sequencesCounter++;
 		}
 
-		motifArraySize=numberOfMotifs*motifLength;
+		//need the extra 1 for the \0 character
+		motifArraySize=(numberOfMotifs*motifLength)+1;
 
-		sequencesArraySize=numberOfSequences*sequencesLength;
+		sequencesArraySize=(numberOfSequences*sequencesLength)+1;
 
 		motifsArray=new char[motifArraySize];
 
@@ -220,35 +221,91 @@ int main(int argc, char* argv [])
 		char sequencesArray[sequencesArraySize];
 
 		MPI_Recv(sequencesArray, sequencesArraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		
 
-		cout << "Processor " << myRank << " received motif array of size: " << motifArraySize << endl;
+		string matchingMotifs {};
 
-		cout << endl;
+		int current=0;
 
-		cout << "Processor " << myRank << " received the following motifs (as one big string):" << endl;
+		int next=motifLength;
 
-		for(int count=0;count<motifArraySize;++count)
+		while(next < motifArraySize+motifLength)
 		{
-			cout << motifsArray[count] << " ";
+			string currentMotif(&motifsArray[current], &motifsArray[next]);
+
+			string repeatMotif {};
+
+			//construct string the same size of the sequences array made
+			//up of only the motif we want to use to compare
+			for(int i=0;i<numberOfSequences;++i)
+			{
+				repeatMotif+=currentMotif;
+			}
+
+			int place=0;
+
+			int matchCount=0;
+
+			int count=1;
+
+			cout << "Using motif: " << currentMotif << endl;
+
+			while(place < sequencesArraySize)
+			{
+				cout << sequencesArray[place] << " and " << motifsArray[place] << " ";
+
+				cout << endl;
+
+				//matching character
+				if((repeatMotif[place]==sequencesArray[place]) || (sequencesArray[place]!='X' && repeatMotif[place]=='X'))
+				{
+					matchCount++;
+				}
+
+				//we've reach the end of a sequence
+				if(count%sequencesLength==0)
+				{
+					//all the characters in the sequence match
+					if(matchCount==sequencesLength)
+					{
+						cout << "Adding the motif: " << currentMotif << endl;
+
+						matchingMotifs+=currentMotif;
+					}
+
+					//need to reset since we will be starting to look at a new sequence
+					matchCount=0;
+				}
+
+				place++;
+
+				count++;
+			}
+
+			cout << endl;
+
+			cout << endl;
+
+			next+=motifLength;
+
+			current+=motifLength;
 		}
 
-		cout << endl;
+		cout << "The matching motifs were: " << endl;
 
-		cout << endl;
+		int present=0;
 
-		cout << "Processor " << myRank << " received the sequences array of size: " << sequencesArraySize << endl;
+		int future=motifLength;
 
-		cout << endl;
-
-		cout << "Processor " << myRank << " received the following sequences (as one big string):" << endl;
-
-		for(int fucks=0;fucks<sequencesArraySize;++fucks)
+		while(future < matchingMotifs.size()+motifLength)
 		{
-			cout << sequencesArray[fucks];
-		}
+			string motif(&matchingMotifs[present], &matchingMotifs[future]);
 
-		cout << endl;
+			cout << motif << endl;
+
+			present+=motifLength;
+
+			future+=motifLength;
+		}
 	}
 
 	motifFile.close();
