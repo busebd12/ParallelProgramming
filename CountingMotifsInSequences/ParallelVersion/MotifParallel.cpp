@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include <climits>
+#include <cstring>
 #include <mpi.h>
 using namespace std;
 
@@ -51,6 +52,8 @@ int main(int argc, char* argv [])
 
 	int sequencesArraySize;
 
+	int chunkSize;
+
 	string motifLine;
 
 	string sequencesLine;
@@ -65,7 +68,7 @@ int main(int argc, char* argv [])
 
 	char *sequencesArray;
 
-	//char *motifChunks;
+	char *motifChunks;
 
 	if(myRank==0)
 	{
@@ -157,11 +160,11 @@ int main(int argc, char* argv [])
 
 		//cout << "Number of sequences: " << numberOfSequences << endl;
 
-		int chunkSize=numberOfMotifs/numberOfProcessors;
+		chunkSize=numberOfMotifs/numberOfProcessors;
 
 		cout << "Chunk size: " << chunkSize << endl;
 
-		char *motifChunks=new char[chunkSize];
+		motifChunks=new char[chunkSize];
 
 		int next=chunkSize;
 
@@ -175,7 +178,9 @@ int main(int argc, char* argv [])
 			{
 				string assignedChunk(&motifs[current], &motifs[next]);
 
-				strcpy(motifChunks, assignedChunk);
+				strcpy(motifChunks, assignedChunk.c_str());
+
+				cout << motifChunks << endl;
 
 				//send the chunk
 				MPI_Send(motifChunks, chunkSize, MPI_CHAR, processor, 0, MPI_COMM_WORLD);
