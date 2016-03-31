@@ -5,18 +5,19 @@
 #include <string>
 #include <fstream>
 #include <map>
+#include <climits>
 #include <mpi.h>
 using namespace std;
 
 int main(int argc, char* argv [])
 {
-	MPI_Init(NULL, NULL);
+	MPI_Init(&argc, &argv);
 
-	int commSize;
+	int numberOfProcessors;
 
 	int myRank;
 
-	MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+	MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcessors);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
@@ -40,10 +41,6 @@ int main(int argc, char* argv [])
 		exit(0);
 	}
 
-	string motifLine;
-
-	string sequencesLine;
-
 	int motifLength;
 
 	int sequencesLength;
@@ -52,17 +49,23 @@ int main(int argc, char* argv [])
 
 	int numberOfSequences;
 
-	char *motifsArray;
+	int motifsArraySize;
 
-	char* sequencesArray;
+	string motifLine;
 
-	int motifArraySize;
-
-	int sequencesArraySize;
+	string sequencesLine;
 
 	string motifs {};
 
 	string sequences {};
+
+	string chunks {};
+
+	string finalResultString {};
+
+	char *motifsArray;
+
+	char *sequencesChunks;
 
 	if(myRank==0)
 	{
@@ -148,154 +151,128 @@ int main(int argc, char* argv [])
 			sequencesCounter++;
 		}
 
-		//need the extra 1 for the \0 character
-		motifArraySize=(numberOfMotifs*motifLength);
+		motifsArraySize=numberOfMotifs*motifLength;
 
-		sequencesArraySize=(numberOfSequences*sequencesLength);
+		//cout << "Number of processors: " << numberOfProcessors << endl;
 
-		motifsArray=new char[motifArraySize];
+		//cout << "Number of sequences: " << numberOfSequences << endl;
 
-		sequencesArray=new char[sequencesArraySize];
+		int chunkSize=numberOfSequences/numberOfProcessors;
 
-		for(int index=0;index<motifs.size();++index)
+		cout << "Chunk size: " << chunkSize << endl;
+
+		sequencesChunks=new char[chunkSize];
+
+		int next=chunkSize;
+
+		int current=0;
+
+		//assign each processor their specific chunk of the sequences
+		for(int processor=0;processor<numberOfProcessors;++processor)
 		{
-			motifsArray[index]=motifs[index];
+			//loop over sequences and chunk them according to the chunk size
+			while(current < sequences.size()+chunkSize)
+			{
+				string assignedChunk(&sequences[current], &sequences[next]);
+
+				strcpy(sequencesChunks, assignedChunk);
+
+				//send the chunk
+				MPI_Send(sequencesChunks, chunkSize, MPI_CHAR, processor, 0, MPI_COMM_WORLD);
+
+				//send the size of each sequence
+				MPI_Send(&sequencesLength, 1, MPI_INT, processor, 0, MPI_COMM_WORLD);
+
+				//send the motifs array size
+				MPI_Send(&motifsArraySize, 1, MPI_INT, processor, 0, MPI_COMM_WORLD);
+
+				//send over the number of motifs
+				MPI_Send(&numberOfMotifs, 1, MPI_INT, processor, 0, MPI_COMM_WORLD);
+
+				//send over the length of a motif
+				MPI_Send(&motifLength, 1, MPI_INT, processor, 0, MPI_COMM_WORLD);
+
+				next+=chunkSize;
+
+				current+=chunkSize;
+
+				break;
+			}
 		}
 
-		for(int spot=0;spot<sequences.size();++spot)
-		{
-			sequencesArray[spot]=sequences[spot];
-		}
+		motifsArray=new char[motifsArraySize];
 
-		cout << "Processor " << myRank << " is going to send the following " << motifs << " motifs to other processors:" << endl;
-
-		cout << endl;
-
-		cout << "Processor " << myRank << " is going to send the following " << sequences << " sequences to the other processors" << endl;
-
-		cout << endl;
-
-		//send motifArraySize, the number of motifs, and the length of a motif to other processors so they can use it
-		MPI_Send(&motifArraySize, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-
-		MPI_Send(&numberOfMotifs, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-
-		MPI_Send(&motifLength, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-
-		//send the motif array
-		MPI_Send(motifsArray, motifArraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
-
-		//send sequencesArraySize, number of sequences, and length of a sequence to other processors so they can use it
-		MPI_Send(&sequencesArraySize, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-
-		MPI_Send(&numberOfSequences, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-
-		MPI_Send(&sequencesLength, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-
-		MPI_Send(sequencesArray, sequencesArraySize, MPI_CHAR, 1, 0, MPI_COMM_WORLD);
+		//broadcast the all of the motifs to all of the processors
+		MPI_Bcast(motifsArray, motifsArraySize, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 		int finalMotifsArraySize;
 
 		char finalMotifsArray[finalMotifsArraySize];
 
-		//receive the shit from the slave processors
-		MPI_Recv(&finalMotifsArraySize, 1, MPI_INT, 1, 1,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-		cout << "The master processor received an array of size " << finalMotifsArraySize << " from the slave processor(s)" << endl;
-
-		cout << endl;
-		
-		MPI_Recv(finalMotifsArray, finalMotifsArraySize, MPI_CHAR, 1, 1,  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-		cout << "The master processor received the following from the slave processor(s): " << endl;
-
-		//int counter=1;
-			
-		for(int i=0;i<finalMotifsArraySize;++i)
+		//go back over processors and get what work they have done
+		for(int processor=0;processor<numberOfProcessors;++processor)
 		{
-			cout << finalMotifsArray[i];
+			//receive stuff from worker processors
+			MPI_Recv(finalMotifsArray, finalMotifsArraySize, MPI_CHAR, processor, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+			//copy into temp string
+			string temp(finalMotifsArray);
 
-			if(i%(motifLength+1)==0)
-			{
-				cout << endl;
-			}
-			
-
-			//counter++;
+			//add temp to final string result
+			finalResultString+=temp;
 		}
 
-		cout << endl;
+		//print result
 
-		cout << endl;
-		
-		/*
-		int present=0;
 
-		int future=motifLength+1;
+		//free the electrons
+		delete [] sequencesChunks;
 
-		while(future < finalMotifsArraySize+(motifLength+1))
-		{
-			string motif(&finalMotifsArray[present], &finalMotifsArray[future]);
-
-			cout << motif << endl;
-
-			present+=motifLength+1;
-
-			future+=motifLength+1;
-		}
-		*/
-
-		//free the electrons		
 		delete [] motifsArray;
-
-		delete [] sequencesArray;
-
 	}
-	else if(myRank==1)
+	else
 	{
-		//cout << "Meanwhile, over on the worker processor" << endl;
-
+		//map for hashing
 		map<string, int> motifMap;
 
-		MPI_Recv(&motifArraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		
-		MPI_Recv(&numberOfMotifs, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		//each processor receives their respective chunks
+		MPI_Recv(sequencesChunks, chunkSize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		MPI_Recv(&motifLength, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-		char motifsArray[motifArraySize];
-
-		MPI_Recv(motifsArray, motifArraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-
-		MPI_Recv(&sequencesArraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		
-		MPI_Recv(&numberOfSequences, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
+		//each processor receives the length of an individual sequence
 		MPI_Recv(&sequencesLength, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		char sequencesArray[sequencesArraySize];
+		//receive motifs array size
+		MPI_Recv(&motifsArraySize, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		MPI_Recv(sequencesArray, sequencesArraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		//receive the number of motifs
+		MPI_Recv(&numberOfMotifs, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		string matchingMotifs {};
+		//receive the length of a motif
+		MPI_Recv(&motifLength, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		motifsArray=new char[motifsArraySize];
+
+		//receive all the motifs
+		MPI_Bcast(motifsArray, motifsArraySize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		//convert to strings for ease of working with
+		string localSequencesChunks(sequencesChunks);
+
+		string localMotifs(motifsArray);
 
 		int current=0;
 
-		int next=motifLength;
+		int next=sequencesLength;
 
-		while(next < motifArraySize+motifLength)
+		while(next < sequences.size()+sequencesLength)
 		{
-			string currentMotif(&motifsArray[current], &motifsArray[next]);
+			string currentSequence(&sequences[current], &sequences[next]);
 
-			string repeatMotif {};
+			string repeatSequence {};
 
-			//construct string the same size of the sequences array made
-			//up of only the motif we want to use to compare
-			for(int i=0;i<numberOfSequences;++i)
+			for(int count=0;count<numberOfMotifs;++count)
 			{
-				repeatMotif+=currentMotif;
+				repeatSequence+=currentSequence;
 			}
 
 			int place=0;
@@ -304,16 +281,14 @@ int main(int argc, char* argv [])
 
 			int count=1;
 
-			//cout << "Using motif: " << currentMotif << endl;
-
-			while(place < sequencesArraySize)
+			while(place < repeatSequence.size())
 			{
 				//cout << sequencesArray[place] << " and " << motifsArray[place] << " ";
 
 				//cout << endl;
 
 				//matching character
-				if((repeatMotif[place]==sequencesArray[place]) || (sequencesArray[place]!='X' && repeatMotif[place]=='X'))
+				if((repeatSequence[place]==localMotifs[place]) || (repeatSequence[place]!='X' && localMotifs[place]=='X'))
 				{
 					matchCount++;
 				}
@@ -330,6 +305,7 @@ int main(int argc, char* argv [])
 						motifMap[currentMotif]++;
 					}
 
+					//if there is a motif that doesn't match, just to be consistent with given output
 					if(matchCount!=sequencesLength)
 					{
 						motifMap.insert({currentMotif, 0});
@@ -348,21 +324,11 @@ int main(int argc, char* argv [])
 
 			//cout << endl;
 
-			next+=motifLength;
+			next+=sequenceLength;
 
-			current+=motifLength;
+			current+=sequenceLength;
 		}
 
-		/*
-		cout << endl;
-
-		cout << motifMap.size() << endl;
-
-		for(const auto & motif : motifMap)
-		{
-			cout << motif.first << ", " << motif.second << endl;
-		}
-		*/
 
 		string finalMotifs {};
 
@@ -384,8 +350,10 @@ int main(int argc, char* argv [])
 
 		char finalMotifsArray[finalMotifsArraySize];
 
-		//copy that one giant string we created eariler into a character array
-		//so that we can actually send it back to the master processor
+		/*
+		copy that one giant string we created eariler into a character array
+		so that we can actually send it back to the master processor
+		*/
 		for(int index=0;index<finalMotifs.size();++index)
 		{
 			finalMotifsArray[index]=finalMotifs[index];
@@ -399,9 +367,9 @@ int main(int argc, char* argv [])
 		//send the final motifs back to the master processor
 		MPI_Send(finalMotifsArray, finalMotifsArraySize, MPI_CHAR, 0, 1, MPI_COMM_WORLD);
 
-		//cout << "Sending from the slave processor to the master processor..." << endl;
-
-		//cout << endl;
+		//free the electrons
+		delete [] motifsArray;
+		
 	}
 
 	motifFile.close();
