@@ -1,7 +1,7 @@
 CC=mpic++ -std=c++0x
 
 motifsearch:
-	$(CC) -o motifsearch etime.c MotifParallel.cpp
+	$(CC) -o motifsearch MotifParallel.cpp
 
 clean:
 	rm motifsearch
