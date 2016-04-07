@@ -262,7 +262,7 @@ int main(int argc, char* argv [])
 
 		motifsPerProcessor=numberOfMotifs/numberOfProcessors;
 
-		chunkSize=motifsPerProcessor*motifLength;
+		chunkSize=(motifsPerProcessor*motifLength)+1;
 
 		cout << "Chunk size: " << chunkSize << endl;
 
@@ -393,6 +393,8 @@ int main(int argc, char* argv [])
 		MPI_Recv(motifChunks, chunkSize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 		cout << "Worker processor received broadcasted motifsChunks" << endl;
+
+		cout << motifChunks << endl;
 
 		cout << endl;
 
