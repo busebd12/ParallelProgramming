@@ -322,23 +322,26 @@ int main(int argc, char* argv [])
 		}
 
 		MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+		//send the sequences array size
+		MPI_Bcast(&sequencesArraySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 		
 		sequencesArray=new char[sequencesArraySize];
+
+		//copy the sequences into from the file into the char array
+		strcpy(sequencesArray, sequences.c_str());
 
 		//broadcast the all of the motifs to all of the processors
 		MPI_Bcast(sequencesArray, sequencesArraySize, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 		//send the size of each sequence
-		MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-		//send the sequences array size
-		MPI_Bcast(&sequencesArraySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		//MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//send over the number of motifs
-		MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		//MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//send over the length of a motif
-		MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		//MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		///////////////////////////////////////////////////////////////////////// END OF OTHER PROCESSORS WORK /////////////////////////////////////////////////////////////////////////
 		
@@ -367,7 +370,7 @@ int main(int argc, char* argv [])
 		//free the electrons
 		delete [] motifChunks;
 
-		delete [] sequencesArray;
+		//delete [] sequencesArray;
 		
 	}
 
@@ -376,11 +379,13 @@ int main(int argc, char* argv [])
 		//map for hashing
 		map<string, int> motifMap;
 
-		cout << "Before broadcast in worker processor" << endl;
+		//cout << "Before broadcast in worker processor" << endl;
 
 		MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-		cout << "Worker processor received broadcasted chunkSize" << endl;
+		cout << "Worker processor received broadcasted chunkSize of " << chunkSize << endl;
+
+		cout << endl;
 	
 		//each processor receives their respective chunks
 		motifChunks=new char[chunkSize];
@@ -389,22 +394,34 @@ int main(int argc, char* argv [])
 
 		cout << "Worker processor received broadcasted motifsChunks" << endl;
 
+		cout << endl;
+
 		//each processor receives the length of an individual sequence
-		MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		//MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+		//cout << "Worker processor received broadcasted sequencesLength of " << sequencesLength << endl;
 
 		//receive sequences array size
 		MPI_Bcast(&sequencesArraySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-		//receive the number of sequences
-		MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		cout << "Woker processor received broadcasted sequencesArraySize of " << sequencesArraySize << endl;
 
-		//receive the length of a motif
-		MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		cout << endl;
 
 		sequencesArray=new char[sequencesArraySize];
 
 		//receive all the sequences
-		MPI_Bcast(sequencesArray, sequencesArraySize, MPI_CHAR, 0, MPI_COMM_WORLD);	
+		MPI_Bcast(sequencesArray, sequencesArraySize, MPI_CHAR, 0, MPI_COMM_WORLD);
+
+		//receive the number of sequences
+		//MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+		//cout << "Worker procesor received broadcasted numberOfSequences " << numberOfSequences << endl;
+
+		//receive the length of a motif
+		//MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+		//cout << "Worker processor received motifLength of " << motifLength << endl;
 
 		//convert to strings for ease of working with
 		string localMotifChunks(motifChunks);
