@@ -379,7 +379,7 @@ int main(int argc, char* argv [])
 			//copy into temp string
 			string temp(finalSequencesArray);
 
-			cout << "temp: " << temp << endl;
+			//cout << "temp: " << temp << endl;
 
 			//add temp to final string result
 			finalResultString+=temp;
@@ -387,12 +387,12 @@ int main(int argc, char* argv [])
 			delete [] finalSequencesArray;
 		}
 
-		cout << "finalSequencesArraySize on the master processor side: " << finalSequencesArraySize << endl;
+		//cout << "finalSequencesArraySize on the master processor side: " << finalSequencesArraySize << endl;
 
-		cout << endl;
+		//cout << endl;
 		
 		//print result
-		cout << "Final result: " << finalResultString << endl;
+		//cout << "Final result: " << finalResultString << endl;
 
 		//free the electrons
 		delete [] motifChunks;
