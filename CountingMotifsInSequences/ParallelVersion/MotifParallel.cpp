@@ -254,7 +254,11 @@ int main(int argc, char* argv [])
 
 		cout << endl;
 
-		sequencesArraySize=numberOfMotifs*motifLength;
+		sequencesArraySize=sequences.size();
+
+		cout << "sequencesArraySize: " << sequencesArraySize << endl;
+
+		cout << endl;
 
 		//cout << "Number of processors: " << numberOfProcessors << endl;
 
@@ -302,16 +306,24 @@ int main(int argc, char* argv [])
 
 				cout << "Assigned motif chunk: " <<  assignedChunk << endl;
 
+				cout << endl;
+
 				strcpy(motifChunks, assignedChunk.c_str());
 
 				cout << "motifChunks: " << motifChunks << endl;
 
+				cout << endl;
+
 				cout << "chunkSize: " << chunkSize << endl;
+
+				cout << endl;
 
 				//send the chunk
 				MPI_Send(motifChunks, chunkSize, MPI_CHAR, processor, 0, MPI_COMM_WORLD);
 
 				cout << "After the MPI_Send" << endl;
+
+				cout << endl;
 
 				next+=chunkSize;
 
@@ -321,7 +333,11 @@ int main(int argc, char* argv [])
 			}
 		}
 
+		//send the chunkSize
 		MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+		//send the size of each sequence
+		MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//send the sequences array size
 		MPI_Bcast(&sequencesArraySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -334,14 +350,11 @@ int main(int argc, char* argv [])
 		//broadcast the all of the motifs to all of the processors
 		MPI_Bcast(sequencesArray, sequencesArraySize, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-		//send the size of each sequence
-		//MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-		//send over the number of motifs
-		//MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		//send over the number of sequences
+		MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//send over the length of a motif
-		//MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		///////////////////////////////////////////////////////////////////////// END OF OTHER PROCESSORS WORK /////////////////////////////////////////////////////////////////////////
 		
@@ -383,47 +396,55 @@ int main(int argc, char* argv [])
 
 		MPI_Bcast(&chunkSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-		cout << "Worker processor received broadcasted chunkSize of " << chunkSize << endl;
+		//cout << "Worker processor received broadcasted chunkSize of " << chunkSize << endl;
 
-		cout << endl;
+		//cout << endl;
 	
 		//each processor receives their respective chunks
 		motifChunks=new char[chunkSize];
 
 		MPI_Recv(motifChunks, chunkSize, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-		cout << "Worker processor received broadcasted motifsChunks" << endl;
+		//cout << "Worker processor received broadcasted motifsChunks" << endl;
 
-		cout << motifChunks << endl;
-
-		cout << endl;
+		//cout << endl;
 
 		//each processor receives the length of an individual sequence
-		//MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&sequencesLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//cout << "Worker processor received broadcasted sequencesLength of " << sequencesLength << endl;
+
+		//cout << endl;
 
 		//receive sequences array size
 		MPI_Bcast(&sequencesArraySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-		cout << "Woker processor received broadcasted sequencesArraySize of " << sequencesArraySize << endl;
+		//cout << "Woker processor received broadcasted sequencesArraySize of " << sequencesArraySize << endl;
 
-		cout << endl;
+		//cout << endl;
 
 		sequencesArray=new char[sequencesArraySize];
 
 		//receive all the sequences
 		MPI_Bcast(sequencesArray, sequencesArraySize, MPI_CHAR, 0, MPI_COMM_WORLD);
 
+		//cout << "Woker processor received broadcasted sequencesArray" << endl;
+
+		//cout << endl;
+
 		//receive the number of sequences
-		//MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&numberOfSequences, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//cout << "Worker procesor received broadcasted numberOfSequences " << numberOfSequences << endl;
 
+		//cout << endl;
+
 		//receive the length of a motif
-		//MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&motifLength, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		//cout << "Worker processor received motifLength of " << motifLength << endl;
+
+		//cout << endl;
 
 		//convert to strings for ease of working with
 		string localMotifChunks(motifChunks);
