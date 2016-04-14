@@ -63,6 +63,10 @@ void checkForMatches(const string & Motifs, const string & Sequences, const int 
 
 					motifMap[currentMotif]++;
 				}
+				else
+				{
+					motifMap.insert({currentMotif, 0});
+				}
 
 				matchCount=0;
 			}
@@ -103,9 +107,9 @@ int main(int argc, char* argv [])
 
 	ofstream outputFile;
 
-	vector<string> motifs;
+	string motifs {};
 
-	vector<string> sequences;
+	string sequences {};
 
 	if(argc!=4)
 	{
@@ -129,6 +133,10 @@ int main(int argc, char* argv [])
 	int motifLength;
 
 	int sequencesLength;
+
+	int numberOfMotifs;
+
+	int numberOfSequences;
 
 	//check to see if we can open either of the files. if not, exit the program, gracefully
 	if(!motifFile.is_open() || !sequencesFile.is_open() || !outputFile.is_open())
@@ -161,15 +169,25 @@ int main(int argc, char* argv [])
 			//form a substring of everything after the space (i.e. the size of the motif)
 			string substringWithSize=motifLine.substr(++foundSpace);
 
+			string motifNumber=motifLine.substr(0, foundSpace);
+
 			//convert string verison of size to integer
 			motifLength=stoi(substringWithSize);
 
-			//cout << "Moftif length: " << motifLength << endl;
+			numberOfMotifs=stoi(motifNumber);
+
+			cout << "Number of motifs: " << numberOfMotifs << endl;
+
+			cout << endl;
+
+			cout << "Moftif length: " << motifLength << endl;
+
+			cout << endl;
 		}
 
 		if(motifCounter!=0)
 		{
-			motifs.push_back(motifLine);
+			motifs+=motifLine;
 		}
 
 		motifCounter++;
@@ -190,15 +208,25 @@ int main(int argc, char* argv [])
 			//form a substring of everything after the space (i.e. the size of the sequence)
 			string substringWithSize=sequencesLine.substr(++foundSpace);
 
+			string sequencesNumber=sequencesLine.substr(0, foundSpace);
+
 			//convert string verison of size to integer
 			sequencesLength=stoi(substringWithSize);
 
-			//cout << "Sequence length: " << sequencesLength << endl;
+			numberOfSequences=stoi(sequencesNumber);
+
+			cout << "Sequence length: " << sequencesLength << endl;
+
+			cout << endl;
+
+			cout << "Number of sequences: " << numberOfSequences << endl;
+
+			cout << endl;
 		}
 
 		if(sequencesCounter!=0)
 		{
-			sequences.push_back(sequencesLine);
+			sequences+=sequencesLine;
 		}
 
 		sequencesCounter++;
