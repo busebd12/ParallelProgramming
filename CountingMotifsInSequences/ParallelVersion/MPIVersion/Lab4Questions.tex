@@ -1,0 +1,65 @@
+\documentclass[executivepaper]{article}
+
+\usepackage{mathtools}
+
+\everymath{\displaystyle}
+
+\usepackage{amssymb}
+
+\usepackage{amsfonts}
+
+\usepackage{kantlipsum,graphicx}
+
+\usepackage{amsmath}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{sectsty}
+
+\usepackage{float}
+
+\usepackage{commath}
+
+\usepackage{amsmath}
+
+\usepackage{amsthm}
+
+\usepackage{adjustbox}
+
+\usepackage{fancyhdr}
+ 
+\pagestyle{fancy}
+
+\fancyhf{}
+
+\rhead{Brendan Busey}
+
+\lhead{MPI Lab Questions}
+
+\rfoot{Page \thepage}
+
+\renewcommand{\headrulewidth}{1pt}
+
+\renewcommand{\footrulewidth}{1pt}
+
+\begin{document}
+
+\begin{flushleft}
+
+1) For both the \textit{motif-distribution} and \textit{sequence-distribution} as the number of processors $P$ increased, for a given set of input files, the speed-up seemed to follow the pattern of continuously increasing since as the number of processor increases, the more work we are getting done in parallel since each processor is spending less time comparing the individual characters.
+
+\end{flushleft}
+
+\begin{flushleft}
+
+2) For both the \textit{motif-distribution} and \textit{sequence-distribution} as the number of processors $P$ increased, for a given set of input files, the efficiency seems to either increase and then decrease, or decrease. I would attribute this to the observation that as we increase the number of processors, although we may be able to get more work done, the overhead associated with ``managing'' the increased processor count also increases with impacts our efficiency in a negative manner.
+
+\end{flushleft}
+
+\begin{flushleft}
+
+3) Seeing as though the average efficiency for the \textit{motif-distribution} is $0.668387$ while the average efficiency for the \textit{sequence-distribution} is $0.902441$, I would have to say that the \textit{motif-distribution} appears to be the more efficient approach out of the two.
+
+\end{flushleft}
+
+\end{document}
