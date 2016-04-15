@@ -4,86 +4,86 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <omp.h>
 #include "etime.h"
 using namespace std;
 
-void checkForMatches(const string & Motifs, const string & Sequences, const int & MotifLength, const int & SequencesLength, const int & NumberOfSequences, ofstream & OutputFile)
+void searchForInstances(const vector<string> & Motifs, const vector<string> & Sequences, const int & NumberOfThreads, ofstream & OutputFile)
 {
 	map<string, int> motifMap;
 
-	int motifLength=MotifLength;
+	///////////////////////////////////////////// START OF DISTRIBUTING MOTIFS VERSION////////////////////////////////////////////////
 
-	int sequenceLength=SequencesLength;
-
-	int numberOfSequences=NumberOfSequences;
-
-	int current {};
-
-	int next=motifLength;
-
-	while(next < Motifs.size()+motifLength)
+	#pragma parallel for num_threads(NumberOfThreads)
+	for(int index=0;index<Motifs.size();++index)
 	{
-		string currentMotif(&Motifs[current], &Motifs[next]);
+		//the current motif we are using in our comparison
+		string motif=Motifs[index];
 
-		string repeatMotif {};
-
-		for(int i=0;i<NumberOfSequences;++i)
+		for(int position=0;position<Sequences.size();++position)
 		{
-			repeatMotif+=currentMotif;
-		}
+			int matchCount=0;
 
-		int place=0;
-
-		int matchCount=0;
-
-		int count=1;
-
-		cout << "Using motif: " << currentMotif << endl;
-
-		while(place < Sequences.size())
-		{
-			cout << Sequences[place] << " and " << repeatMotif[place] << " ";
-
-			cout << endl;
-
-			if((repeatMotif[place]==Sequences[place]) || (Sequences[place]!='X' && repeatMotif[place]=='X'))
+			for(int spot=0;spot<Sequences[position].size();++spot)
 			{
-				matchCount++;
+				//check for matching characters
+				if((Sequences[position][spot]==motif[spot]) || (Sequences[position][spot]!='X' && motif[spot]=='X'))
+				{
+					matchCount++;
+				}
 			}
 
-			if(count%SequencesLength==0)
+			//if a sequence matches a motif
+			if(matchCount==motif.size())
 			{
-				cout << "End of a sequence" << endl;
-
-				cout << "mathCount: " << matchCount << endl;
-
-				if(matchCount==SequencesLength)
-				{
-					cout << "Adding the motif: " << currentMotif << endl;
-
-					motifMap[currentMotif]++;
-				}
-				else
-				{
-					motifMap.insert({currentMotif, 0});
-				}
-
-				matchCount=0;
+				#pragma omp critical
+				motifMap[motif]++;
 			}
-
-			place++;
-
-			count++;
+			else
+			{
+				motifMap.insert({motif, 0});
+			}
 		}
-
-		cout << endl;
-
-		cout << endl;
-
-		next+=MotifLength;
-
-		current+=MotifLength;
 	}
+
+	////////////////////////////////////////// END OF DISTRIBUTING MOTIFS VERSION //////////////////////////////////////////////////////////////
+
+	/*
+	do
+	{
+		string sequence=Sequences[index];
+
+		for(int position=0;position<Motifs.size();++position)
+		{
+			int matchCount=0;
+
+			for(int spot=0;spot<sequence.size();++spot)
+			{
+				//compare the characters
+				if(sequence[spot]==Motifs[position][spot] || (Motifs[position][spot]=='X' && sequence[spot]!='X'))
+				{
+					//characters match, so increment the number of matches
+					matchCount++;
+				}
+			}
+
+			//Add the motif if matches the sequence
+			if(matchCount==sequence.size())
+			{
+				motifMap[Motifs.at(position)]++;
+			}
+
+			//add the motif even if it doesn't match the sequence, just be be consistent with the example output
+			if(matchCount!=sequence.size())
+			{
+				motifMap.insert({Motifs.at(position), 0});
+			}
+		}
+
+		index++;
+	}
+	while(index!=Sequences.size());
+	*/
 
 	cout << motifMap.size() << endl;
 
@@ -107,13 +107,13 @@ int main(int argc, char* argv [])
 
 	ofstream outputFile;
 
-	string motifs {};
+	vector<string> motifs;
 
-	string sequences {};
+	vector<string> sequences;
 
-	if(argc!=4)
+	if(argc!=2)
 	{
-		cout << "Wrong amount of command line arguments. Should be <executable>  <motifFile>  <sequencesFile>  <outputFile>" << endl;
+		cout << "Wrong amount of command line arguments. Should be <executable>  <number of threads>" << endl;
 
 		cout << endl;
 
@@ -124,19 +124,21 @@ int main(int argc, char* argv [])
 		exit(0);
 	}
 
-	motifFile.open(argv[1]);
+	int numberOfThreads=atoi(argv[1]);
 
-	sequencesFile.open(argv[2]);
+	cout << "Number of threads: " << numberOfThreads << endl;
 
-	outputFile.open(argv[3]);
+	cout << endl;
+
+	motifFile.open("./motifsSmall.txt");
+
+	sequencesFile.open("./sequencesSmall.txt");
+
+	outputFile.open("./myOutputSmall.txt");
 
 	int motifLength;
 
 	int sequencesLength;
-
-	int numberOfMotifs;
-
-	int numberOfSequences;
 
 	//check to see if we can open either of the files. if not, exit the program, gracefully
 	if(!motifFile.is_open() || !sequencesFile.is_open() || !outputFile.is_open())
@@ -169,25 +171,15 @@ int main(int argc, char* argv [])
 			//form a substring of everything after the space (i.e. the size of the motif)
 			string substringWithSize=motifLine.substr(++foundSpace);
 
-			string motifNumber=motifLine.substr(0, foundSpace);
-
 			//convert string verison of size to integer
 			motifLength=stoi(substringWithSize);
 
-			numberOfMotifs=stoi(motifNumber);
-
-			cout << "Number of motifs: " << numberOfMotifs << endl;
-
-			cout << endl;
-
-			cout << "Moftif length: " << motifLength << endl;
-
-			cout << endl;
+			//cout << "Moftif length: " << motifLength << endl;
 		}
 
 		if(motifCounter!=0)
 		{
-			motifs+=motifLine;
+			motifs.push_back(motifLine);
 		}
 
 		motifCounter++;
@@ -208,25 +200,15 @@ int main(int argc, char* argv [])
 			//form a substring of everything after the space (i.e. the size of the sequence)
 			string substringWithSize=sequencesLine.substr(++foundSpace);
 
-			string sequencesNumber=sequencesLine.substr(0, foundSpace);
-
 			//convert string verison of size to integer
 			sequencesLength=stoi(substringWithSize);
 
-			numberOfSequences=stoi(sequencesNumber);
-
-			cout << "Sequence length: " << sequencesLength << endl;
-
-			cout << endl;
-
-			cout << "Number of sequences: " << numberOfSequences << endl;
-
-			cout << endl;
+			//cout << "Sequence length: " << sequencesLength << endl;
 		}
 
 		if(sequencesCounter!=0)
 		{
-			sequences+=sequencesLine;
+			sequences.push_back(sequencesLine);
 		}
 
 		sequencesCounter++;
@@ -246,7 +228,7 @@ int main(int argc, char* argv [])
 
 	tic();
 
-	checkForMatches(motifs, sequences, motifLength, sequencesLength, numberOfSequences, outputFile);
+	searchForInstances(motifs, sequences, numberOfThreads, outputFile);
 
 	toc();
 

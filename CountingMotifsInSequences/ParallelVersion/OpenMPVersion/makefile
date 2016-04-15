@@ -1,7 +1,7 @@
-CC=g++ -std=c++0x
+CC=g++ -fopenmp -std=c++0x
 
 motifsearch:
-	$(CC) -o motifsearch etime.c NewSerialVersion.cpp
+	$(CC) -o motifsearch etime.c DistributingMotifs.cpp
 
 clean:
 	rm motifsearch
