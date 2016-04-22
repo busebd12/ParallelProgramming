@@ -12,46 +12,42 @@ void searchForInstances(const vector<string> & Motifs, const vector<string> & Se
 {
 	map<string, int> motifMap;
 
-	/*three different  test "settings"; uncomment them as necessary*/
-
-	//#pragma parallel for num_threads(NumberOfThreads) schedule(static, 1)
-	//#pragma parallel for num_threads(NumberOfThreads) schedule(dynamic, 1)
 	#pragma parallel for num_threads(NumberOfThreads)
-	for(int index=0;index<Motifs.size();++index)
+	for(int index=0;index<Sequences.size();++index)
 	{
-		//the current motif we are using in our comparison
-		string motif=Motifs[index];
+		string sequence=Sequences[index];
 
-		for(int position=0;position<Sequences.size();++position)
+		for(int position=0;position<Motifs.size();++position)
 		{
-			//keeps track of number of characters that match
 			int matchCount=0;
 
-			for(int spot=0;spot<Sequences[position].size();++spot)
+			for(int spot=0;spot<sequence.size();++spot)
 			{
-				//check for matching characters
-				if((Sequences[position][spot]==motif[spot]) || (Sequences[position][spot]!='X' && motif[spot]=='X'))
+				//compare the characters
+				if(sequence[spot]==Motifs[position][spot] || (Motifs[position][spot]=='X' && sequence[spot]!='X'))
 				{
+					//characters match, so increment the number of matches
 					matchCount++;
 				}
 			}
 
-			//need a critical section here since all threads are trying to access the map; potential for data race
 			#pragma omp critical
 			{
-				//if a sequence matches a motif
-				if(matchCount==motif.size())
+				//Add the motif if matches the sequence
+				if(matchCount==sequence.size())
 				{
-					motifMap[motif]++;
+					motifMap[Motifs.at(position)]++;
 				}
-				else
+
+				//add the motif even if it doesn't match the sequence, just be be consistent with the example output
+				if(matchCount!=sequence.size())
 				{
-					motifMap.insert({motif, 0});
-				}
+					motifMap.insert({Motifs.at(position), 0});
+				}				
 			}
-			
 		}
 	}
+
 	cout << motifMap.size() << endl;
 
 	OutputFile << motifMap.size() << endl;
@@ -80,7 +76,7 @@ int main(int argc, char* argv [])
 
 	if(argc!=5)
 	{
-		cout << "Wrong amount of command line arguments. Should be <executable>  <number of threads>  <motifsFile> <sequencesFile>  <outputFile>" << endl;
+		cout << "Wrong amount of command line arguments. Should be <executable>  <number of threads>  <motifsFile>  <sequencesFile>  <outputFile>" << endl;
 
 		cout << endl;
 

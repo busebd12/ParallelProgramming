@@ -4,6 +4,7 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include "etime.h"
 using namespace std;
 
 void searchForInstances(const vector<string> & Motifs, const vector<string> & Sequences, int MotifLength, ofstream & OutputFile)
@@ -182,7 +183,13 @@ int main(int argc, char* argv [])
 		exit(0);
 	}
 
+	tic();
+
 	searchForInstances(motifs, sequences, motifLength, outputFile);
+
+	toc();
+
+	cout << "Runtime: " << etime() << endl;
 
 	motifFile.close();
 
